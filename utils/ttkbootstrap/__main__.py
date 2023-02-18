@@ -1,6 +1,6 @@
 import tkinter as tk
-import ttkbootstrap as ttk
-from ttkbootstrap.style import utility
+import utils.ttkbootstrap as ttk
+from utils.ttkbootstrap.style import utility
 
 utility.enable_high_dpi_awareness()
 

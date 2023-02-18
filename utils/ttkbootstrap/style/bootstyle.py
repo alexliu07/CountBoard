@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
-import ttkbootstrap.style.utility as util
-from ttkbootstrap.style.style import Style
-from ttkbootstrap.style.style_builder import StyleBuilderTK, StyleBuilderTTK
-from ttkbootstrap.style.publisher import Publisher, Channel
+import utils.ttkbootstrap.style.utility as util
+from utils.ttkbootstrap.style.style import Style
+from utils.ttkbootstrap.style.style_builder import StyleBuilderTK, StyleBuilderTTK
+from utils.ttkbootstrap.style.publisher import Publisher, Channel
 
 TTK_WIDGETS = (
     ttk.Button,

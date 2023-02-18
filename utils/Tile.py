@@ -6,27 +6,18 @@
 @Date ：2021/11/8 11:00
 @contact: g1695698547@163.com
 """
-import json
 import queue
 import random
 import tkinter as tk
-import traceback
-import webbrowser
 from datetime import datetime
-from pathlib import Path
-from queue import Queue
 from threading import Thread
 from tkinter import *
-import ttkbootstrap as ttk
-from tkinter.filedialog import askopenfilename
+import utils.ttkbootstrap as ttk
 import pywintypes
-import requests
 import win32gui
-from markdown2 import Markdown
-from CustomWindow import CustomWindow
-from TkHtmlView import TkHtmlView
-from ttkbootstrap.widgets.date_entry import DateEntry
-from WindowEffect import WindowEffect
+from utils.CustomWindow import CustomWindow
+from utils.ttkbootstrap.widgets.date_entry import DateEntry
+from utils.WindowEffect import WindowEffect
 
 
 class Tile(CustomWindow):
@@ -62,8 +53,6 @@ class Tile(CustomWindow):
         self.tile_queue = tile_queue  # 子线程与主线程的队列作为中继
         # 布局
         self.frame_top = Frame(self.root, bg=self.bg)
-        # self.frame_top.configure(highlightbackground="#202020")
-        # self.frame_top.configure(highlightthickness=1)
         self.frame_top.pack(side=TOP, fill="both", expand=True)
         # 画布
         self.canvas = Canvas(self.frame_top)
@@ -391,11 +380,9 @@ class Tasks:
                   x1, y1 + radius,
                   x1, y1 + radius,
                   x1, y1]
-        # self.canvas.create_polygon(points, **kwargs, smooth=True, width=1, outline="#080808")
         self.canvas.create_polygon(points, **kwargs, smooth=True, width=1, outline=self.tasks_border_color)
 
     def __handler(self, fun, **kwds):
-        # 实际上是可以直接 lambda： button.bind("<Button-1>", lambda e: handler(e, a=1, b=2, c=3))
         return lambda event, fun=fun, kwds=kwds: fun(event, **kwds)
 
     def __add_task(self, value):
@@ -460,7 +447,6 @@ class Tasks:
             self.task_tag_name,
             '<Button-3>',
             func=self.__handler(self.__right_click, task_tag_name=self.task_tag_name))
-        # self.canvas.unbind('<Button-3>')
 
     def __right_click(self, event, task_tag_name):
         self.tile_queue.put(("set_tag_name", task_tag_name))
@@ -522,7 +508,6 @@ class Tasks:
 
         self.task_y = self.task_margin_y
 
-        # print("数据库中的tile_geometry：", self.tile_geometry)
 
         # 没有任务项目时的大小
         self.pre_window_root.geometry("%dx%d+%d+%d" % (self.task_width + self.task_margin_x * 2,
@@ -530,10 +515,6 @@ class Tasks:
                                                        self.tile_geometry[2],
                                                        self.tile_geometry[3]))
 
-        # print("没有任务项目时的tile_geometry：", (self.task_width + self.task_margin_x * 2,
-        #                                  self.task_y + self.task_height + self.task_margin_y,
-        #                                  self.tile_geometry[2],
-        #                                  self.tile_geometry[3]))
 
         for value in sorted(self.mydb_dict.itervalues(), key=self.__get_int_day):
             self.__add_task(value)
@@ -619,7 +600,6 @@ class NewTaskWindow(CustomWindow):
                     command=self.del_task,
                 ).pack(side=tk.LEFT, padx=3)
 
-        # self.root.mainloop()
 
     def del_task(self):
         """删除一项"""
@@ -685,7 +665,6 @@ class AskDelWindow(CustomWindow):
             command=self.ok, )
         self.ok_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
 
-        # self.root.mainloop()
 
     def cancel(self):
         self.root.destroy()
@@ -727,8 +706,6 @@ class AskResetWindow(CustomWindow):
             command=self.ok, )
         self.ok_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
 
-        # self.root.mainloop()
-
     def cancel(self):
         self.root.destroy()
 
@@ -737,53 +714,19 @@ class AskResetWindow(CustomWindow):
         self.root.destroy()
         self.main_window_queue.put("exit")
 
+# 处理滑动条小数
+class Limiter(ttk.Scale):
+    """ ttk.Scale sublass that limits the precision of values. """
 
-class HelpWindow(CustomWindow):
-    def __init__(self, path, *args, **kwargs):
-        self.root = tk.Toplevel()
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        self.precision = kwargs.pop('precision')  # Remove non-std kwarg.
+        self.chain = kwargs.pop('command', lambda *a: None)  # Save if present.
+        super(Limiter, self).__init__(*args, command=self._value_changed, **kwargs)
 
-        # 传递参数
-        self.path = path
-
-        # 窗口布局
-        self.frame_bottom = ttk.Frame(self.root)
-        self.frame_bottom.pack(side=tk.BOTTOM, fill=BOTH, expand=False)
-        self.frame_top = ttk.Frame(self.root, padding=20)
-        self.frame_top.pack(side=tk.TOP, fill=BOTH, expand=True)
-
-        self.HtmlView = TkHtmlView(self.frame_top, background="white")
-        self.HtmlView.pack(fill='both', expand=True)
-
-        self.filename = tk.StringVar()
-        ttk.Entry(self.frame_bottom, textvariable=self.filename).pack(side=tk.LEFT, padx=20, pady=10, fill='x',
-                                                                      expand=True)
-        ttk.Button(self.frame_bottom, text='选择文件', command=self.open_file).pack(side=tk.LEFT, padx=20, pady=10)
-
-        # 加载默认md文件
-        self.p = Thread(target=self.init_file)
-        self.p.setDaemon(True)
-        self.p.start()
-
-        self.root.mainloop()
-
-    def init_file(self):
-        with open(self.path, encoding='utf-8') as f:
-            self.filename.set(self.path)
-            md2html = Markdown()
-            html = md2html.convert(f.read())
-            self.HtmlView.set_html(html)
-
-    def open_file(self):
-        path = askopenfilename()
-        if not path:
-            return
-        with open(path, encoding='utf-8') as f:
-            self.filename.set(path)
-            md2html = Markdown()
-            html = md2html.convert(f.read())
-            self.HtmlView.set_html(html)
-
+    def _value_changed(self, newvalue):
+        newvalue = round(float(newvalue), self.precision)
+        self.winfo_toplevel().globalsetvar(self.cget('variable'), (newvalue))
+        self.chain(newvalue)  # Call user specified function.
 
 class ScaleFrame(Frame):
     """自定义滑动条"""
@@ -793,11 +736,10 @@ class ScaleFrame(Frame):
 
         ttk.Label(master=self, text=name).pack(side=tk.LEFT, fill=tk.X, padx=(0, 2))
         self.scale_var = tk.IntVar(value=init_value)
-        ttk.Scale(master=self, variable=self.scale_var, from_=from_, to=to, command=func).pack(side=tk.LEFT, fill=tk.X,
+        Limiter(master=self, variable=self.scale_var, from_=from_, to=to, command=func, precision=0).pack(side=tk.LEFT, fill=tk.X,
                                                                                                expand=tk.YES,
-                                                                                               padx=(0, 2))
+                                                                                      padx=(0, 2))
         ttk.Entry(self, textvariable=self.scale_var, width=4).pack(side=tk.RIGHT)
-
     def get_value(self):
         return self.scale_var.get()
 
@@ -852,129 +794,7 @@ class WaitWindow(CustomWindow):
         if content == "exit":
             self.exit()
 
-
-class UpdateWindow(CustomWindow):
-    """检查更新页面"""
-
-    def __init__(self, version, logger, *args, **kwargs):
-        self.root = tk.Toplevel()
-        super().__init__(*args, **kwargs)
-
-        self.version = version
-        self.logger = logger
-
-        self.update_version = version
-        self.update_url = ""
-
-        # 布局
-        self.frame_top = Frame(self.root)
-        self.frame_top.pack(side=TOP, padx=20, pady=5, expand=True, fill=X)
-        self.frame_bottom = Frame(self.root)
-        self.frame_bottom.pack(side=BOTTOM, padx=20, expand=True, fill=X)
-
-        self.lable = ttk.Label(self.frame_top, text="正在检查更新中......")
-        self.lable.pack(side=tk.TOP, padx=5, pady=2, expand=True, fill=X)
-
-        # 开启更新UI队列
-        self.queue = Queue()  # 子线程与主线程的队列作为中继
-        self.root.after(500, self.relay)
-
-        # 开启请求线程
-        self.update_thread = Thread(target=self.update)
-        self.update_thread.setDaemon(True)
-        self.update_thread.start()
-
-        # self.root.mainloop()
-
-    '''-----------------------------------更新UI 线程-----------------------------------------------'''
-
-    def relay(self):
-        """
-        更新UI
-        """
-        while not self.queue.empty():
-            content = self.queue.get()
-            if content == "需要更新":
-                self.lable.config(text="发现新版本：CountBoard V" + self.update_version)
-
-                self.cancel_button = ttk.Button(
-                    master=self.frame_bottom,
-                    text='取消',
-                    bootstyle='outline',
-                    command=self.cancel, )
-                self.cancel_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
-
-                self.ok_button = ttk.Button(
-                    master=self.frame_bottom,
-                    text='更新',
-                    bootstyle='outline',
-                    command=self.ok, )
-                self.ok_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
-
-            elif content == "不需更新":
-                self.lable.config(text="当前已经是最新版本")
-
-                self.cancel_button = ttk.Button(
-                    master=self.frame_bottom,
-                    text='取消',
-                    bootstyle='outline',
-                    command=self.cancel, )
-                self.cancel_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
-
-                self.ok_button = ttk.Button(
-                    master=self.frame_bottom,
-                    text='确认',
-                    bootstyle='outline',
-                    command=self.ok, )
-                self.ok_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
-
-            elif content == "网络错误":
-                self.lable.config(text="当前网络错误（请检查网络，关闭代理）")
-
-                self.cancel_button = ttk.Button(
-                    master=self.frame_bottom,
-                    text='取消',
-                    bootstyle='outline',
-                    command=self.cancel, )
-                self.cancel_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
-
-                self.ok_button = ttk.Button(
-                    master=self.frame_bottom,
-                    text='确认',
-                    bootstyle='outline',
-                    command=self.cancel)
-                self.ok_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
-
-        self.root.after(100, self.relay)
-
-    def ok(self):
-        if self.version != self.update_version:
-            webbrowser.open_new_tab(self.update_url)
-        self.root.destroy()
-
-    def cancel(self):
-        self.root.destroy()
-
     '''-----------------------------------请求线程-----------------------------------------------'''
-
-    def update(self):
-        update_path = str(Path(self.exe_dir_path).joinpath("update.txt"))
-        try:
-            with open(update_path, "wb") as f:
-                f.write(requests.get("https://aidcs-1256440297.cos.ap-beijing.myqcloud.com/update.txt").content)
-            with open(update_path, "r", encoding='utf8') as f:
-                config = f.readline()
-            config_dict = json.loads(config)
-            self.update_version = config_dict["version"]
-            self.update_url = config_dict["url"]
-            if self.version != self.update_version:
-                self.queue.put("需要更新")
-            else:
-                self.queue.put("不需更新")
-        except:
-            self.logger.info(traceback.format_exc())
-            self.queue.put("网络错误")
-
 
 class ResizingCanvas(Canvas):
     """
@@ -994,4 +814,3 @@ class ResizingCanvas(Canvas):
         self.height = event.height
         self.config(width=self.width, height=self.height)
         self.scale("", 0, 0, wscale, hscale)
-        # self.scale("all", 0, 0, wscale, hscale)

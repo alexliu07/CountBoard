@@ -2,8 +2,8 @@ import math
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw
-from ttkbootstrap.style.colors import Colors
-import ttkbootstrap.style.utility as util
+from utils.ttkbootstrap.style.colors import Colors
+import utils.ttkbootstrap.style.utility as util
 
 FULL = 'full'
 SEMI = 'semi'

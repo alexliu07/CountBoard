@@ -1,11 +1,11 @@
 from tkinter import TclError, ttk
 from typing import Callable
-from ttkbootstrap.constants import *
-from ttkbootstrap.themes.standard import STANDARD_THEMES
-from ttkbootstrap.themes.user import USER_THEMES
-from ttkbootstrap.style.style_builder import StyleBuilderTTK, ThemeDefinition
-from ttkbootstrap.style.publisher import Publisher, Channel
-from ttkbootstrap.style import utility as util
+from utils.ttkbootstrap.constants import *
+from utils.ttkbootstrap.themes.standard import STANDARD_THEMES
+from utils.ttkbootstrap.themes.user import USER_THEMES
+from utils.ttkbootstrap.style.style_builder import StyleBuilderTTK, ThemeDefinition
+from utils.ttkbootstrap.style.publisher import Publisher, Channel
+from utils.ttkbootstrap.style import utility as util
 
 
 class StyleManager(ttk.Style):

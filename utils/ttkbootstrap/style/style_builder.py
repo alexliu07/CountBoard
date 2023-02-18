@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import font
 from tkinter import ttk
-from ttkbootstrap.constants import *
-from ttkbootstrap.style.colors import Colors
+from utils.ttkbootstrap.constants import *
+from utils.ttkbootstrap.style.colors import Colors
 from PIL import Image, ImageDraw, ImageTk, ImageFont
 from math import ceil
 
@@ -3023,8 +3023,7 @@ class StyleBuilderTTK:
         str
             The PhotoImage name.
         """
-        from math import ceil
-        
+
         box = self.scale_size(1)
         pad = box * 2
         chunk = box + pad # 4

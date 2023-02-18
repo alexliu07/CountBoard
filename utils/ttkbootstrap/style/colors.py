@@ -1,5 +1,5 @@
 import colorsys
-from ttkbootstrap.constants import *
+from utils.ttkbootstrap.constants import *
 
 class Colors:
     """A class that contains the theme colors as well as several

@@ -13,6 +13,3 @@ from PyInstaller.utils.hooks import collect_submodules, copy_metadata, collect_a
 
 datas = copy_metadata('apscheduler', recursive=True)
 hiddenimports = collect_submodules('apscheduler')
-
-
-

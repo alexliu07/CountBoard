@@ -12,28 +12,24 @@ import os
 import time
 import win32api
 import win32con
+from queue import Queue
+import webbrowser
+import traceback
+from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 from pywin10 import TaskBarIcon
 from sqlitedict import SqliteDict
-from Tile import *
-from CustomWindow import CustomWindow
-import ttkbootstrap as ttk
-from ttkbootstrap.style import utility
-
-
-# from tzlocal import get_localzone
+from utils.Tile import *
+from utils.CustomWindow import CustomWindow
+import utils.ttkbootstrap as ttk
+from utils.ttkbootstrap.style import utility
 
 
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
-    def __init__(self, version, icon, logger, exe_dir_path, first_dict, *args, **kwargs):
+    def __init__(self, version, icon, logger, exe_dir_path, *args, **kwargs):
         self.root = tk.Tk()
-
-        self.first_dict = first_dict
-        if first_dict["scaling_flag"][0]:
-            self.root.tk.call('tk', 'scaling', first_dict["scaling"][0] / 100)
-        logger.info("默认窗口缩放:" + str(self.root.tk.call('tk', 'scaling')))
 
         self.style = ttk.Style()
         super().__init__(*args, **kwargs)
@@ -73,9 +69,6 @@ class MainWindow(CustomWindow):
         self.exe_dir_path = exe_dir_path
         self.icon = icon
 
-        # 设置主题
-        # utility.enable_high_dpi_awareness()
-
         # 变量初始化（在耗时线程中赋值）
         self.theme_name = tk.StringVar()
         self.tile_theme_name = tk.StringVar()
@@ -86,8 +79,6 @@ class MainWindow(CustomWindow):
         self.task_radius = tk.IntVar()
         self.auto_run = tk.IntVar()
         self.tile_auto_margin = tk.IntVar()
-        self.scaling_flag = tk.IntVar()
-        self.scaling = tk.IntVar()
         self.tile_transparent = tk.IntVar()
         self.tile_auto_margin_length = tk.IntVar()
         self.regular_notify_flag = tk.IntVar()
@@ -103,6 +94,8 @@ class MainWindow(CustomWindow):
         self.interval_notify_title = tk.StringVar()
         self.interval_notify_content = tk.StringVar()
 
+        # 取消主窗体置顶
+        self.root.wm_attributes('-topmost', 0)
         # 界面布局
         self.main_frame = ttk.Frame(self.root, style='custom.TFrame', padding=10)
         self.main_frame.pack(side=BOTTOM, fill="both", expand=True)
@@ -124,7 +117,6 @@ class MainWindow(CustomWindow):
         self.root.protocol("WM_DELETE_WINDOW", self.close_)
 
         # 大名鼎鼎的apscheduler
-        # self.scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
         self.scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
         self.scheduler.add_job(self.refresh_, 'cron', hour=0, minute=0)
         self.scheduler.start()
@@ -189,11 +181,6 @@ class MainWindow(CustomWindow):
             # 解决因主界面主题改变导致resize控件样式改变的问题
             self.change_theme(None)
 
-        elif content == "UpdateWindow":
-            # 打开检查更新窗体
-            UpdateWindow(title="检查更新", logger=self.logger, height=100, exe_dir_path=self.exe_dir_path,
-                         version=self.version)
-
         elif content == "AskResetWindow":
             # 打开恢复默认窗体
             AskResetWindow(title="恢复默认", main_window_queue=self.main_window_queue, height=150)
@@ -201,10 +188,6 @@ class MainWindow(CustomWindow):
         elif content == "AskDelWindow":
             # 打开删除全部窗体
             AskDelWindow(title="删除全部", height=150, tile_queue=self.tile_queue)
-
-        elif content == "HelpWindow":
-            # 打开使用说明窗体
-            HelpWindow(title='使用说明', width=1000, height=600, path=self.exe_dir_path + "/introduction.md")
 
         elif content == "NewTaskWindow":
             # 打开新建日程
@@ -217,18 +200,6 @@ class MainWindow(CustomWindow):
         elif content == "exit":
             sys.exit(1)
 
-            try:
-                self.scheduler.shutdown(True)
-                time.sleep(1)
-                self.exit()
-            except:
-                print("ddddddddddddddddddddddd")
-
-            # import win32con
-            # self.hwnd = pywintypes.HANDLE(int(self.root.frame(), 16))
-            # win32gui.PostMessage(self.hwnd, win32con.WM_CLOSE, 0, 0)
-            # print()
-
         elif content == "show_":
             # 显示窗体
             self.show_()
@@ -237,12 +208,6 @@ class MainWindow(CustomWindow):
             # 设置主题
             self.style.theme_use(self.theme_name.get())
 
-        elif content == "set_scaling":
-            # 自定义缩放：此选项只能设置之后的缩放，已经绘制的控件无法更改
-            # ScaleFactor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
-            # root.tk.call('tk', 'scaling', ScaleFactor / 75)
-            self.scaling = self.root.tk.call('tk', 'scaling', 3)
-            # print("scaling")
 
         elif content == "set_regular_notify":
             # 设置主题
@@ -284,18 +249,15 @@ class MainWindow(CustomWindow):
 
     def initialization(self):
         """执行耗时操作,例如从数据库读取数据(先布局—_init2__设变量，然后在此线程中动态赋值)"""
-        # self.main_window_queue.put("show_wait_window")
-
-        # self.main_window_queue.put("set_scaling")
 
         # 判断是否第一次运行(执行恢复默认操作)
-        if not os.path.exists(self.exe_dir_path + "/my_setting.sqlite"):
+        if not os.path.exists(self.exe_dir_path + "/data/settings.sqlite"):
             self.logger.info("第一次运行")
             self.reset()
 
         # 读取数据库
-        self.mydb_dict = SqliteDict(self.exe_dir_path + '/my_db.sqlite', autocommit=True)
-        self.mysetting_dict = SqliteDict(self.exe_dir_path + '/my_setting.sqlite', autocommit=True)
+        self.mydb_dict = SqliteDict(self.exe_dir_path + '/data/database.sqlite', autocommit=True)
+        self.mysetting_dict = SqliteDict(self.exe_dir_path + '/data/settings.sqlite', autocommit=True)
         self.logger.info([(x, i) for x, i in self.mysetting_dict.items()])
 
         # 其他变量
@@ -344,32 +306,18 @@ class MainWindow(CustomWindow):
         self.regular_notify_title.set(self.regular_notify["title"])
         self.regular_notify_content.set(self.regular_notify["content"])
 
-        self.interval_notify_flag.set(self.interval_notify["flag"])
-        self.interval_notify_h.set(self.interval_notify["h"])
-        self.interval_notify_m.set(self.interval_notify["m"])
-        self.interval_notify_s.set(self.interval_notify["s"])
-        self.interval_notify_title.set(self.interval_notify["title"])
-        self.interval_notify_content.set(self.interval_notify["content"])
-
-        self.scaling_flag.set(self.first_dict["scaling_flag"][0])
-        self.scaling.set(self.first_dict["scaling"][0])
-
-        # self.main_window_queue.put("set_theme")
-        # self.queue.put("change_theme")  # 解决因主题改变导致resize控件样式改变
-
         # 设置主题
         self.main_window_queue.put("set_theme")
         # 打开tile
         self.main_window_queue.put("show_tile")
         # 关闭等待窗体
-        # self.main_window_queue.put("close_wait_window")
         self.main_window_queue.put("set_interval_notify")
         self.main_window_queue.put("set_regular_notify")
 
     def reset(self):
         """恢复默认配置或者初始化配置"""
-        mydb_dict = SqliteDict(self.exe_dir_path + '/my_db.sqlite', autocommit=True)
-        mysetting_dict = SqliteDict(self.exe_dir_path + '/my_setting.sqlite', autocommit=True)
+        mydb_dict = SqliteDict(self.exe_dir_path + '/data/database.sqlite', autocommit=True)
+        mysetting_dict = SqliteDict(self.exe_dir_path + '/data/settings.sqlite', autocommit=True)
         mydb_dict.clear()
         mysetting_dict.clear()
 
@@ -403,7 +351,7 @@ class MainWindow(CustomWindow):
 
     def backend(self):
         """后台图标线程"""
-        with SqliteDict(self.exe_dir_path + '/my_setting.sqlite') as mydict:  # re-open the same DB
+        with SqliteDict(self.exe_dir_path + '/data/settings.sqlite') as mydict:  # re-open the same DB
             try:
                 taskbar_icon = mydict["taskbar_icon"][0]
             except:
@@ -415,20 +363,16 @@ class MainWindow(CustomWindow):
             icon=self.icon,
             hover_text=self.title,
             menu_options=[
-                ['退出', "exit.ico", self.exit__, 1],  # 菜单项格式:["菜单项名称","菜单项图标路径或None",回调函数或者子菜单列表,id数字(随便写不要重复即可)]
-
-                ["分隔符", None, None, 111],
-                ['检查更新', "update.ico", self.update__, 4],
-                ['使用说明', "help.ico", self.help__, 3],
+                ['退出', "icons/exit.ico", self.exit__, 1],  # 菜单项格式:["菜单项名称","菜单项图标路径或None",回调函数或者子菜单列表,id数字(随便写不要重复即可)]
 
                 ["分隔符", None, None, 222],
-                ['恢复默认', "recovery.ico", self.reset__, 16],
-                ['开源地址', "github.ico", self.github__, 42],
-                ['主界面', "home.ico", self.show__, 2],
+                ['恢复默认', "icons/recovery.ico", self.reset__, 16],
+                ['开源地址', "icons/github.ico", self.github__, 42],
+                ['主界面', "icons/home.ico", self.show__, 2],
 
                 ["分隔符", None, None, 111],
-                ['删除全部', "del.ico", self.delall__, 7],
-                ['新建日程', "edit.ico", self.newtask__, 6]
+                ['删除全部', "icons/del.ico", self.delall__, 7],
+                ['新建日程', "icons/edit.ico", self.newtask__, 6]
             ],
             menu_style="iconic" if taskbar_icon else "normal",
             icon_x_pad=12
@@ -449,10 +393,6 @@ class MainWindow(CustomWindow):
         self.tile_queue.put("exit")
         self.main_window_queue.put("exit")
 
-    def update__(self):
-        """检查更新"""
-        self.main_window_queue.put("UpdateWindow")
-
     def reset__(self):
         """恢复默认"""
         self.main_window_queue.put("AskResetWindow")
@@ -461,16 +401,12 @@ class MainWindow(CustomWindow):
         """删除所有"""
         self.main_window_queue.put("AskDelWindow")
 
-    def help__(self, **kwargs):
-        """使用说明"""
-        self.main_window_queue.put("HelpWindow")
-
     def newtask__(self):
         """新建日程"""
         self.main_window_queue.put("NewTaskWindow")
 
     def github__(self):
-        webbrowser.open("https://github.com/Gaoyongxian666/CountBoard")
+        webbrowser.open("https://github.com/alexliu07/CountBoard")
 
     '''-----------------------------------主页页面-----------------------------------------------'''
 
@@ -491,7 +427,6 @@ class MainWindow(CustomWindow):
             text='磁贴模式',
             padding=10
         )
-        # ttk.Label(widget_frame1, text="建议嵌入桌面模式下开启边框").pack(anchor="nw", )
 
         widget_frame1.pack(fill=tk.X, pady=8)
         win_mode_list = ['嵌入桌面', '独立窗体']
@@ -551,29 +486,6 @@ class MainWindow(CustomWindow):
         themes_cbo.pack(fill=tk.X, pady=5)
         themes_cbo.bind("<<ComboboxSelected>>", self.change_theme)
 
-        # 布局17
-        widget_frame17 = ttk.LabelFrame(
-            master=rframe,
-            text='组件缩放',
-            padding=10
-        )
-        widget_frame17.pack(fill=tk.X, pady=8)
-
-        ttk.Checkbutton(widget_frame17, text='是否开启组件缩放（通常不开启）',
-                        variable=self.scaling_flag,
-                        bootstyle="square-toggle",
-                        command=self.set_scaling_flag).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
-        ttk.Label(master=widget_frame17, text='针对2K，4K高分辨率屏幕，需要重启生效').pack(side=tk.TOP, fill=tk.X, expand=tk.YES,
-                                                                           pady=5)
-
-        ttk.Label(master=widget_frame17, text='缩放大小：').pack(side=tk.LEFT)
-        ttk.Spinbox(master=widget_frame17, values=[i for i in range(100, 300)], width=3,
-                    textvariable=self.scaling).pack(side=tk.LEFT, padx=(5, 0),
-                                                    # fill=tk.X, expand=tk.YES,
-                                                    pady=5)
-        ttk.Button(master=widget_frame17, text='更改', bootstyle='outline', command=self.set_scaling).pack(
-            side=tk.LEFT, padx=10)
-
         # 布局11
         widget_frame11 = ttk.LabelFrame(
             master=lframe,
@@ -626,7 +538,6 @@ class MainWindow(CustomWindow):
         ttk.Spinbox(master=widget_frame7, values=[i for i in range(20)], width=3,
 
                     textvariable=self.tile_auto_margin_length).pack(side=tk.LEFT, padx=(5, 0),
-                                                                    # fill=tk.X, expand=tk.YES,
                                                                     pady=5)
         ttk.Button(master=widget_frame7, text='更改', bootstyle='outline', command=self.set_auto_margin_length).pack(
             side=tk.LEFT, padx=10)
@@ -654,51 +565,31 @@ class MainWindow(CustomWindow):
             command=self.delall__)
         b3.pack(side=tk.LEFT, fill=tk.X, padx=(0, 5), expand=tk.YES)
 
-        b1 = ttk.Button(
-            top_frame,
-            text='使用说明',
-            bootstyle='outline',
-            command=self.help__)
-        b1.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
-
         b4 = ttk.Button(
-            bottom_frame,
-            text='检查更新',
-            bootstyle='outline',
-            command=self.update__)
-        b4.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
-
-        b5 = ttk.Button(
             bottom_frame,
             text='恢复默认',
             bootstyle='outline',
             command=self.reset__)
-        b5.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
+        b4.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
 
-        b6 = ttk.Button(
+        b5 = ttk.Button(
             bottom_frame,
             text='开源地址',
             bootstyle='outline',
             command=self.github__)
-        b6.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
+        b5.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
 
-    def set_scaling_flag(self):
-        self.first_dict["scaling_flag"] = [self.scaling_flag.get()]
-
-    def set_scaling(self):
-        self.first_dict["scaling"] = [self.scaling.get()]
-
-    def change_win_mode(self, event):
+    def change_win_mode(self,event):
         """修改磁贴的模式"""
         self.mysetting_dict["win_mode"] = [self.win_mode.get()]
         self.tile_queue.put(("update_win_mode", self.win_mode.get()))
 
-    def change_mode(self, event):
+    def change_mode(self,event):
         """修改计时模式"""
         self.mysetting_dict["mode"] = [self.mode.get()]
         self.tile_queue.put("refresh_tasks")
 
-    def change_title_theme(self, event):
+    def change_title_theme(self,event):
         """修改磁贴的主题"""
         self.mysetting_dict['tile_theme_name'] = [self.tile_theme_name.get()]
         if self.tile_theme_name.get() == "Acrylic":
@@ -706,7 +597,7 @@ class MainWindow(CustomWindow):
         else:
             self.tile_queue.put("update_theme_Aero")
 
-    def change_theme(self, event):
+    def change_theme(self,event):
         """更改界面主题"""
         self.main_tab.destroy()
         new_theme = self.theme_name.get()
@@ -717,13 +608,8 @@ class MainWindow(CustomWindow):
         self.nb.select(self.nb.tabs()[0])
         self.theme_name.set(new_theme)
 
-        # # 因为重置tile，所以要重新设置
+        # 因为重置tile，所以要重新设置
         self.tile_queue.put("set_background")
-
-        # # 因为会重置TSizegrip，所以要重新设置
-        # style = ttk.Style()
-        # style.configure('myname.TSizegrip', background="black")
-        # self.tile.sizegrip.config(style='myname.TSizegrip')
 
     def set_taskbar_icon(self):
         """设置菜单图标"""
@@ -745,8 +631,6 @@ class MainWindow(CustomWindow):
 
         name = 'CountBoard'  # 要添加的项值名称
         path = str(Path(self.exe_dir_path).joinpath("CountBoard.exe"))  # 要添加的exe路径
-        # KeyName = "SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run"  # 注册表项名
-        # key = win32api.RegOpenKey(win32con.HKEY_LOCAL_MACHINE, KeyName, 0, win32con.KEY_ALL_ACCESS)
 
         KeyName = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"  # 注册表项名
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER, KeyName, 0, win32con.KEY_ALL_ACCESS)
@@ -760,44 +644,6 @@ class MainWindow(CustomWindow):
             win32api.RegDeleteValue(key, name)
             print('关闭软件自启动')
         win32api.RegCloseKey(key)
-
-    # @property
-    # def is_admin(self):
-    #     try:
-    #         return ctypes.windll.shell32.IsUserAnAdmin()
-    #     except:
-    #         return False
-    #
-    # def set_auto_run(self):
-    #     """是否开启软件自启"""
-    #     self.mysetting_dict["auto_run"] = [self.auto_run.get()]
-    #     name = 'CountBoard'  # 要添加的项值名称
-    #     path = str(Path(self.exe_dir_path).joinpath("CountBoard.exe"))  # 要添加的exe路径
-    #     cmd_reg = \
-    #         "reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run /v %s /t REG_SZ /d %s /f" % (
-    #             name, path)
-    #     cmd_del_reg = \
-    #         "REG DELETE HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run /v %s" % (
-    #             name)
-    #
-    #     if self.is_admin:
-    #         # 将要运行的代码加到这里
-    #         if self.auto_run.get() == 1:
-    #             os.system(cmd_reg)
-    #             print('开启软件自启动')
-    #         else:
-    #             # 偷懒了，不想修改注册表直接删除了事
-    #             os.system(cmd_del_reg)
-    #             print('关闭软件自启动')
-    #     else:
-    #         # 将要运行的代码加到这里
-    #         if self.auto_run.get() == 1:
-    #             ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", "/C %s" % cmd_reg, None, 1)
-    #             print('开启软件自启动')
-    #         else:
-    #             # 偷懒了，不想修改注册表直接删除了事
-    #             ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", "/C %s" % cmd_del_reg, None, 1)
-    #             print('关闭软件自启动')
 
     def set_tile_auto_margin(self):
         """是否开启自动贴边"""
@@ -858,7 +704,12 @@ class MainWindow(CustomWindow):
 
         ttk.Label(
             master=widget_frame4,
-            text='更新时间：2021年12月02日'
+            text='更新时间：2023年2月18日'
+        ).pack(side=tk.TOP, fill=tk.X)
+
+        ttk.Label(
+            master=widget_frame4,
+            text='修改版作者：alexliu07'
         ).pack(side=tk.TOP, fill=tk.X)
 
         # 分割
@@ -869,12 +720,7 @@ class MainWindow(CustomWindow):
 
         ttk.Label(
             master=widget_frame4,
-            text='国内仓库：https://gitee.com/gao_yongxian/CountBoard'
-        ).pack(side=tk.TOP, fill=tk.X)
-
-        ttk.Label(
-            master=widget_frame4,
-            text='项目地址：https://github.com/Gaoyongxian666/CountBoard'
+            text='项目地址：https://github.com/alexliu07/CountBoard'
         ).pack(side=tk.TOP, fill=tk.X)
 
         return tab
@@ -929,7 +775,7 @@ class MainWindow(CustomWindow):
     def create_timer_tab(self):
         tab = ttk.Frame(self.nb, padding=10)
 
-        '''#####################定时提醒#####################'''
+        '''定时提醒'''
         widget_frame1 = ttk.LabelFrame(
             master=tab,
             text='定时提醒',
@@ -1006,7 +852,7 @@ class MainWindow(CustomWindow):
         ttk.Entry(bottom_frame1, textvariable=self.regular_notify_content).pack(side=tk.LEFT, fill=tk.X, padx=(5, 2),
                                                                                 expand=tk.YES)
 
-        '''#####################间隔提醒#####################'''
+        '''间隔提醒'''
         widget_frame5 = ttk.LabelFrame(
             master=tab,
             text='间隔提醒',
@@ -1116,9 +962,8 @@ class MainWindow(CustomWindow):
             padding=10,
         )
         widget_frame.pack(fill=tk.X, pady=8)
-
-        self.task_width_scale = ScaleFrame(widget_frame, "日程宽度", 150, 150, 400, self.control_task_width)
-        self.task_height_scale = ScaleFrame(widget_frame, "日程高度", 40, 40, 150, self.control_task_height)
+        self.task_width_scale = ScaleFrame(widget_frame, "日程宽度", 150, 150, 1000, self.control_task_width)
+        self.task_height_scale = ScaleFrame(widget_frame, "日程高度", 40, 40, 375, self.control_task_height)
         self.task_margin_x_scale = ScaleFrame(widget_frame, "左右边距", 0, 0, 20, self.control_task_margin_x)
         self.task_margin_y_scale = ScaleFrame(widget_frame, "上下边距", 0, 0, 20, self.control_task_margin_y)
 
@@ -1135,9 +980,9 @@ class MainWindow(CustomWindow):
         )
         widget_frame2.pack(fill=tk.X, pady=8)
 
-        self.title_scale = ScaleFrame(widget_frame2, "标题", 8, 8, 30, self.control_title)
-        self.time_scale = ScaleFrame(widget_frame2, "时间", 8, 8, 30, self.control_time)
-        self.count_scale = ScaleFrame(widget_frame2, "计数", 14, 14, 40, self.control_count)
+        self.title_scale = ScaleFrame(widget_frame2, "标题", 8, 8, 300, self.control_title)
+        self.time_scale = ScaleFrame(widget_frame2, "时间", 8, 8, 300, self.control_time)
+        self.count_scale = ScaleFrame(widget_frame2, "计数", 14, 14, 400, self.control_count)
 
         self.title_scale.pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         self.time_scale.pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
@@ -1151,40 +996,40 @@ class MainWindow(CustomWindow):
         )
         widget_frame3.pack(fill=tk.X, pady=8)
 
-        self.tasks_border = ScaleFrame(widget_frame3, "日程边框", 0, 0, 15, self.control_tasks_border)
-        self.windows_border = ScaleFrame(widget_frame3, "窗体边框", 0, 0, 15, self.control_windows_border)
+        self.tasks_border = ScaleFrame(widget_frame3, "日程边框", 0, 0, 30, self.control_tasks_border)
+        self.windows_border = ScaleFrame(widget_frame3, "窗体边框", 0, 0, 30, self.control_windows_border)
 
         self.tasks_border.pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         self.windows_border.pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
 
         return tab
 
-    def control_tasks_border(self, event):
+    def control_tasks_border(self,event):
         """控制任务的字号"""
         self.mysetting_dict["tasks_border"] = [self.tasks_border.get_value()]
         self.tile_queue.put("refresh_tasks")
 
-    def control_windows_border(self, event):
+    def control_windows_border(self,event):
         """控制任务的字号"""
         self.mysetting_dict["windows_border"] = [self.windows_border.get_value()]
         self.tile_queue.put("refresh_tasks")
 
-    def control_title(self, event):
+    def control_title(self,event):
         """控制任务的字号"""
         self.mysetting_dict["title_scale"] = [self.title_scale.get_value()]
         self.tile_queue.put("refresh_tasks")
 
-    def control_time(self, event):
+    def control_time(self,event):
         """控制任务的字号"""
         self.mysetting_dict["time_scale"] = [self.time_scale.get_value()]
         self.tile_queue.put("refresh_tasks")
 
-    def control_count(self, event):
+    def control_count(self,event):
         """控制任务的字号"""
         self.mysetting_dict["count_scale"] = [self.count_scale.get_value()]
         self.tile_queue.put("refresh_tasks")
 
-    def control_task_width(self, event):
+    def control_task_width(self,event):
         """控制任务的宽度"""
         self.mysetting_dict["task_geometry"] = \
             [(self.task_width_scale.get_value(), self.mysetting_dict["task_geometry"][0][1],
@@ -1192,7 +1037,7 @@ class MainWindow(CustomWindow):
 
         self.tile_queue.put("refresh_tasks")
 
-    def control_task_height(self, event):
+    def control_task_height(self,event):
         """控制任务的高度"""
         self.mysetting_dict["task_geometry"] = \
             [(self.mysetting_dict["task_geometry"][0][0], self.task_height_scale.get_value(),
@@ -1200,7 +1045,7 @@ class MainWindow(CustomWindow):
 
         self.tile_queue.put("refresh_tasks")
 
-    def control_task_margin_x(self, event):
+    def control_task_margin_x(self,event):
         """控制任务的左右边距"""
         self.mysetting_dict["task_geometry"] = \
             [(self.mysetting_dict["task_geometry"][0][0], self.mysetting_dict["task_geometry"][0][1],
@@ -1208,7 +1053,7 @@ class MainWindow(CustomWindow):
 
         self.tile_queue.put("refresh_tasks")
 
-    def control_task_margin_y(self, event):
+    def control_task_margin_y(self,event):
         """控制任务的上下边距"""
         self.mysetting_dict["task_geometry"] = \
             [(self.mysetting_dict["task_geometry"][0][0], self.mysetting_dict["task_geometry"][0][1],
@@ -1266,17 +1111,12 @@ def my_logs(exe_dir_path):
     return logger
 
 
-
 @just_one_instance
 def main():
     # pathlib可以根据平台自动转换斜杠，不过返回的不是str，还需要转化
-    # exe_dir_path=str(Path(sys.argv[0]).parent)
-
     exe_dir_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-    # print(exe_dir_path)
 
-    os.environ['REQUESTS_CA_BUNDLE'] = os.path.join(exe_dir_path, 'cacert.pem')
-    # print(os.environ['REQUESTS_CA_BUNDLE'])
+    os.environ['REQUESTS_CA_BUNDLE'] = os.path.join(exe_dir_path, 'other/cacert.pem')
 
     logger = my_logs(exe_dir_path)
     logger.info(exe_dir_path)
@@ -1285,32 +1125,18 @@ def main():
     screen_info = win32api.GetMonitorInfo(win32api.MonitorFromPoint((0, 0)))
     logger.info(str(screen_info))
 
-    # 获取时区
-    # local_tz = get_localzone()
-    # logger.info(local_tz)
-
-    # 需要在创建窗口之前读取的数据
-    if not os.path.exists(exe_dir_path + "/first.sqlite"):
-        logger.info("第一次运行")
-        first_dict = SqliteDict(exe_dir_path + '/first.sqlite', autocommit=True)
-        first_dict["scaling_flag"] = [0]
-        first_dict["scaling"] = [133]
-    else:
-        first_dict = SqliteDict(exe_dir_path + '/first.sqlite', autocommit=True)
-        logger.info([(x, i) for x, i in first_dict.items()])
 
     try:
         MainWindow(
             title="CountBoard",
-            icon=str(Path(exe_dir_path).joinpath("favicon.ico")),
+            icon=str(Path(exe_dir_path).joinpath("icons/favicon.ico")),
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
             version="1.3.0.2",
             logger=logger,
             exe_dir_path=exe_dir_path,
-            show=0,
-            first_dict=first_dict)
+            show=0,)
     except:
         logger.error(traceback.format_exc())
 
@@ -1318,8 +1144,3 @@ def main():
 if __name__ == "__main__":
     utility.enable_high_dpi_awareness()
     main()
-
-# -w不带控制行
-# 用户名带空格-->用引号 C:\Users\Gao yongxian\PycharmProjects\CountBoard
-# pyinstaller -F -i "C:\Users\Gao yongxian\PycharmProjects\CountBoard\favicon.ico" "C:\Users\Gao yongxian\PycharmProjects\CountBoard\CountBoard.py"
-# pyinstaller -F -i "C:\Users\Gao yongxian\PycharmProjects\CountBoard\favicon.ico" "C:\Users\Gao yongxian\PycharmProjects\CountBoard\CountBoard.py" -w --additional-hooks-dir=./hooks
