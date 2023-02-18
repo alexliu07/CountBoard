@@ -6,8 +6,9 @@ build
 .idea
 *.pyc
 pack
-*.sqlite
+data
 .venv
 logs
 pack32
 *.txt
+other

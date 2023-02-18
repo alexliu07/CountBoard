@@ -1120,8 +1120,6 @@ def main():
     # pathlib可以根据平台自动转换斜杠，不过返回的不是str，还需要转化
     exe_dir_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 
-    os.environ['REQUESTS_CA_BUNDLE'] = os.path.join(exe_dir_path, 'other/cacert.pem')
-
     logger = my_logs(exe_dir_path)
     logger.info(exe_dir_path)
 
