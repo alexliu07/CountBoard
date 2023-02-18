@@ -121,6 +121,10 @@ class MainWindow(CustomWindow):
         self.scheduler.add_job(self.refresh_, 'cron', hour=0, minute=0)
         self.scheduler.start()
 
+        # 检测是否有data文件夹
+        if not os.path.exists("data"):
+            os.mkdir("data")
+
     def close_(self):
         """重写关闭按钮"""
         self.root.withdraw()
