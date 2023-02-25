@@ -9,6 +9,7 @@
 import os
 import sys
 import traceback
+import tkinter as tk
 from win32api import GetMonitorInfo, MonitorFromPoint
 
 

@@ -9,6 +9,7 @@
 import queue
 import random
 import tkinter as tk
+import traceback
 from datetime import datetime
 from threading import Thread
 from tkinter import *
@@ -47,6 +48,7 @@ class Tile(CustomWindow):
         # 传参
         self.logger = logger
         self.bg = bg
+        self.can_move = 0
         self.exe_dir_path = exe_dir_path
         self.mydb_dict = mydb_dict
         self.mysetting_dict = mysetting_dict
@@ -136,6 +138,10 @@ class Tile(CustomWindow):
             self.set_top(1)
         elif content == "cancel_window_top":
             self.set_top(0)
+        elif content == "set_tile_move":
+            self.can_move = 1
+        elif content == "cancel_tile_move":
+            self.can_move = 0
         elif content == "refresh_tasks":
             self.tasks.refresh_tasks()
         elif content == "show_all_tasks":
@@ -290,7 +296,6 @@ class Tile(CustomWindow):
             self.root.wm_attributes('-topmost', 1)
         else:
             self.root.wm_attributes('-topmost', 0)
-
     '''-----------------------------------耗时操作线程-----------------------------------------------'''
 
     def initialization(self):
@@ -308,22 +313,62 @@ class Tile(CustomWindow):
         self.win_mode = self.mysetting_dict["win_mode"][0]
         # 数据初始化
         self.tile_queue.put("set_data")
-        # 展示所以数据
+        # 展示所有数据
         self.tile_queue.put("show_all_tasks")
 
     '''-----------------------------------重写父类方法-----------------------------------------------'''
 
-    def _on_release(self, event, *kw):
+    def _on_release(self, event, *kw, **kwargs):
         if self.tile_theme_name == "Acrylic":
             self.window_effect.setAcrylicEffect(self.hwnd, self.tile_transparent)
             self.set_background(bg=self.bg)
-        super()._on_release(event, mysetting_dict=self.mysetting_dict)
+        if self.can_move == 1:
+            """鼠标左键弹起"""
+            offset_x = event.x_root - self.root_x
+            offset_y = event.y_root - self.root_y
 
-    def _on_tap(self, event):
-        if self.tile_theme_name == "Acrylic":
-            self.set_background(bg="grey")
-            self.window_effect.removeBackgroundEffect(self.hwnd)
-        super()._on_tap(event)
+            if self._auto_margin:
+                if self.width + self.abs_x + offset_x > self.work_width:
+                    x_adjust = self.work_width - self.width - self.offset
+                elif self.abs_x + offset_x < 0:
+                    x_adjust = 0 + self.offset
+                else:
+                    x_adjust = self.abs_x + offset_x
+
+                if self.height + self.abs_y + offset_y > self.work_heigh:
+                    y_adjust = self.work_heigh - self.height - self.offset
+                elif self.abs_y + offset_y < 0:
+                    y_adjust = 0 + self.offset
+                else:
+                    y_adjust = self.abs_y + offset_y
+            else:
+                y_adjust = self.abs_y + offset_y
+                x_adjust = self.abs_x + offset_x
+
+            geo_str = "%dx%d+%d+%d" % (self.width, self.height, x_adjust, y_adjust)
+
+            try:
+                self.mysetting_dict["tile_geometry"] = [(self.width, self.height, x_adjust, y_adjust)]
+                print("写入数据库成功")
+            except:
+                print("写入数据库失败")
+                print(traceback.format_exc())
+
+            self.root.geometry(geo_str)
+
+    def _on_move(self, event):
+        if self.can_move == 1:
+            """移动"""
+            offset_x = event.x_root - self.root_x
+            offset_y = event.y_root - self.root_y
+
+            x_adjust = self.abs_x + offset_x
+            y_adjust = self.abs_y + offset_y
+
+            geo_str = "%dx%d+%d+%d" % (self.width, self.height,
+                                       x_adjust, y_adjust)
+            self.root.geometry(geo_str)
+
 
 
 class Tasks:
@@ -711,6 +756,34 @@ class AskResetWindow(CustomWindow):
 
     def ok(self):
         self.main_window_queue.put("reset")
+        self.root.destroy()
+        self.main_window_queue.put("exit")
+
+class PromptWindow(CustomWindow):
+    def __init__(self, main_window_queue, text, *args, **kwargs):
+        self.root = tk.Toplevel()
+        super().__init__(*args, **kwargs)
+
+        # 传递参数
+        self.main_window_queue = main_window_queue
+
+        # 布局
+        self.frame_top = Frame(self.root)
+        self.frame_top.pack(side=TOP, padx=20, pady=5, expand=True, fill=X)
+        self.frame_bottom = Frame(self.root)
+        self.frame_bottom.pack(side=BOTTOM, padx=20, expand=True, fill=X)
+
+        self.lable = ttk.Label(self.frame_top, text=text)
+        self.lable.pack(side=tk.TOP, padx=5, pady=2, expand=True, fill=X)
+
+        self.ok_button = ttk.Button(
+            master=self.frame_bottom,
+            text='确认',
+            bootstyle='outline',
+            command=self.ok, )
+        self.ok_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
+
+    def ok(self):
         self.root.destroy()
         self.main_window_queue.put("exit")
 

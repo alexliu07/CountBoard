@@ -75,6 +75,7 @@ class MainWindow(CustomWindow):
         self.mode = tk.StringVar()
         self.win_mode = tk.StringVar()
         self.tile_top = tk.IntVar()
+        self.allow_move = tk.IntVar()
         self.taskbar_icon = tk.IntVar()
         self.task_radius = tk.IntVar()
         self.auto_run = tk.IntVar()
@@ -178,7 +179,7 @@ class MainWindow(CustomWindow):
                  _auto_margin=self.tile_auto_margin.get(),
                  offset=self.tile_auto_margin_length.get(),
                  _geometry=self.tile_geometry,
-                 tile_queue=self.tile_queue,
+                 tile_queue=self.tile_queue
                  )
 
         elif content == "change_theme":
@@ -243,6 +244,7 @@ class MainWindow(CustomWindow):
                 except:
                     self.logger.info("没有：self.interval_notify_job.remove()")
 
+
     def interval_notify_(self):
         self.t.ShowToast(title=self.interval_notify_title.get(), msg=self.interval_notify_content.get())
 
@@ -285,6 +287,12 @@ class MainWindow(CustomWindow):
         self.auto_run.set(self.mysetting_dict['auto_run'][0])
         self.tile_top.set(self.mysetting_dict["tile_top"][0])
         self.taskbar_icon.set(self.mysetting_dict["taskbar_icon"][0])
+        # 新增加的设定
+        try:
+            self.allow_move.set(self.mysetting_dict["allow_move"][0])
+        except KeyError:
+            self.add_new_default()
+        self.set_allow_move()
         # 贴边设置
         self.tile_auto_margin.set(self.mysetting_dict['tile_auto_margin'][0])
         self.tile_auto_margin_length.set(self.mysetting_dict['tile_auto_margin_length'][0])
@@ -318,6 +326,14 @@ class MainWindow(CustomWindow):
         self.main_window_queue.put("set_interval_notify")
         self.main_window_queue.put("set_regular_notify")
 
+    def add_new_default(self):
+        """增加新添加的设置内容"""
+        mysetting_dict = SqliteDict(self.exe_dir_path + '/data/settings.sqlite', autocommit=True)
+
+        mysetting_dict['allow_move'] = [1]
+
+        #打开提示窗口
+        PromptWindow(title="设定更新完毕",main_window_queue=self.main_window_queue,text="新版本设定更新完成，将会自动关闭程序",height=150,width=350)
     def reset(self):
         """恢复默认配置或者初始化配置"""
         mydb_dict = SqliteDict(self.exe_dir_path + '/data/database.sqlite', autocommit=True)
@@ -329,6 +345,7 @@ class MainWindow(CustomWindow):
         mysetting_dict['tile_geometry'] = [(300, 84, 20, 20)]
         mysetting_dict['tile_top'] = [1]
         mysetting_dict['taskbar_icon'] = [1]
+        mysetting_dict['allow_move'] = [1]
 
         mysetting_dict['tile_auto_margin'] = [1]
         mysetting_dict['tile_auto_margin_length'] = [3]
@@ -510,12 +527,12 @@ class MainWindow(CustomWindow):
                         command=self.set_auto_run).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         ttk.Checkbutton(widget_frame5, text='是否开启磁贴的置顶功能', variable=self.tile_top, bootstyle="square-toggle",
                         command=self.set_tile_top).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
-        ttk.Checkbutton(widget_frame5, text='是否开启磁贴的圆角功能', variable=self.task_radius, onvalue=25, offvalue=0,
-                        bootstyle="square-toggle",
+        ttk.Checkbutton(widget_frame5, text='是否开启磁贴的圆角功能', variable=self.task_radius, onvalue=25, offvalue=0,bootstyle="square-toggle",
                         command=self.set_task_radius).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         ttk.Checkbutton(widget_frame5, text='是否显示右键菜单图标(需要重启生效)', variable=self.taskbar_icon, bootstyle="square-toggle",
                         command=self.set_taskbar_icon).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
-
+        ttk.Checkbutton(widget_frame5, text="是否允许拖动", variable=self.allow_move, bootstyle="square-toggle",
+                        command=self.set_allow_move).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         # 布局6
         widget_frame6 = ttk.LabelFrame(
             master=lframe,
@@ -662,6 +679,15 @@ class MainWindow(CustomWindow):
             self.tile_queue.put("set_window_top")
         else:
             self.tile_queue.put("cancel_window_top")
+
+    def set_allow_move(self):
+        """是否开启磁贴的拖动功能"""
+        self.mysetting_dict["allow_move"] = [self.allow_move.get()]
+
+        if self.allow_move.get() == 1:
+            self.tile_queue.put("set_tile_move")
+        else:
+            self.tile_queue.put("cancel_tile_move")
 
     def set_task_radius(self):
         """是否开启磁贴的圆角功能"""
@@ -1135,7 +1161,7 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.3.0.2",
+            version="1.4",
             logger=logger,
             exe_dir_path=exe_dir_path,
             show=0,)
