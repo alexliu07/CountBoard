@@ -13,6 +13,9 @@ import traceback
 from datetime import datetime
 from threading import Thread
 from tkinter import *
+
+import chinese_calendar
+
 import utils.ttkbootstrap as ttk
 import pywintypes
 import win32gui
@@ -20,7 +23,25 @@ from utils.CustomWindow import CustomWindow
 from utils.ttkbootstrap.widgets.date_entry import DateEntry
 from utils.WindowEffect import WindowEffect
 
-
+def calc_dates(days,value,startdate,enddate):
+    """计算天数"""
+    day = days
+    if day > 0:
+        holidays = len(chinese_calendar.get_holidays(startdate,enddate))
+        workdays = len(chinese_calendar.get_workdays(startdate,enddate))
+    else:
+        holidays = -len(chinese_calendar.get_holidays(enddate,startdate))
+        workdays = -len(chinese_calendar.get_workdays(enddate,startdate))
+    if value[6] and value[7]:
+        pass
+    else:
+        #计算工作日
+        if value[6]:
+            day = workdays
+        #计算节假日/周末
+        elif value[7]:
+            day = holidays
+    return str(day)
 class Tile(CustomWindow):
     """磁贴窗口"""
 
@@ -96,7 +117,7 @@ class Tile(CustomWindow):
 
     def open_edit_winodw(self):
         """打开编辑窗口"""
-        self.tile_queue.put("EidtTaskWindow")
+        self.tile_queue.put("EditTaskWindow")
 
     def open_del_winodw(self):
         self.tile_queue.put("DelTaskWindow")
@@ -151,7 +172,7 @@ class Tile(CustomWindow):
 
         elif content == "NewTaskWindow":
             # 打开新建日程
-            NewTaskWindow(title="新建日程", height=180, tile_queue=self.tile_queue)
+            NewTaskWindow(title="新建日程", height=220, tile_queue=self.tile_queue)
 
         elif content == "exit":
             self.exit()
@@ -179,12 +200,12 @@ class Tile(CustomWindow):
         elif content == "set_background":
             self.set_background(bg=self.bg)
 
-        elif content == "EidtTaskWindow":
+        elif content == "EditTaskWindow":
             for value in self.mydb_dict.itervalues():
                 if value[4] == self.tag_name.get():
                     NewTaskWindow(
                         title="修改日程",
-                        height=180,
+                        height=220,
                         tile_queue=self.tile_queue,
                         value=value)
                     return 1
@@ -203,6 +224,8 @@ class Tile(CustomWindow):
                 self.tasks.del_one(content[1])
             elif content[0] == "add_one":
                 self.tasks.add_one(content[1])
+            elif content[0] == "add_day_type":
+                self.tasks.add_day_type(content[1],content[2])
             elif content[0] == "modify_offset":
                 self.modify_offset(content[1])
             elif content[0] == "modify_auto_margin":
@@ -392,12 +415,12 @@ class Tasks:
 
     def update_sqlite_time(self):
         # 初始化更新时间
-        from datetime import datetime
         for key, value in self.mydb_dict.iteritems():
             startdate = datetime.today()
             enddate = datetime.strptime(value[1], '%Y-%m-%d')
-            days = str((enddate - startdate).days)
-            self.mydb_dict[key] = [value[0], value[1], days, value[3], value[4], value[5]]
+            days = (enddate - startdate).days
+            days = calc_dates(days,value,startdate,enddate)
+            self.mydb_dict[key] = [value[0], value[1], days, value[3], value[4], value[5], value[6], value[7]]
 
     def __get_int_day(self, value):
         """按照时间排序(返回第三个值,时间值)"""
@@ -501,7 +524,7 @@ class Tasks:
             if value[4] == task_tag_name:
                 NewTaskWindow(
                     title="修改日程",
-                    height=180,
+                    height=220,
                     tile_queue=self.tile_queue,
                     value=value)
                 return 1
@@ -509,6 +532,9 @@ class Tasks:
 
     def add_one(self, value):
         self.mydb_dict[value[0]] = value
+
+    def add_day_type(self,name,type):
+        self.mydb_dict[name][type] = 1
 
     def del_one(self, value):
         self.mydb_dict.__delitem__(value)
@@ -610,6 +636,19 @@ class NewTaskWindow(CustomWindow):
         self.date_entry = DateEntry(timer_frame)
         self.date_entry.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=3)
 
+        # 倒计时日期类型选择
+        choose_frame = ttk.Frame(self.main_frame)
+        choose_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(master=choose_frame, text='天数类型 ').pack(side=tk.LEFT, fill=tk.X)
+        #工作日
+        self.check_workday = IntVar()
+        self.check_workday.set(1)
+        ttk.Checkbutton(choose_frame, text="工作日", variable=self.check_workday).pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
+        #周末/节假日
+        self.check_holiday = IntVar()
+        self.check_holiday.set(1)
+        ttk.Checkbutton(choose_frame, text="周末/节假日",variable=self.check_holiday).pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
+
         # 第三行框架
         ok_frame = ttk.Frame(self.main_frame)
         ok_frame.pack(fill=tk.X, pady=5)
@@ -637,6 +676,16 @@ class NewTaskWindow(CustomWindow):
 
                 self.date_entry.entry.delete(0, "end")
                 self.date_entry.entry.insert(0, self.value[1])
+
+                # 新增加的天数类型变量
+                try:
+                    self.check_workday.set(int(self.value[6]))
+                except IndexError:
+                    self.tile_queue.put('add_day_type',self.value[0],6)
+                try:
+                    self.check_holiday.set(int(self.value[7]))
+                except IndexError:
+                    self.tile_queue.put('add_day_type',self.value[0],7)
 
                 self.del_task_button = ttk.Button(
                     master=ok_frame,
@@ -666,13 +715,17 @@ class NewTaskWindow(CustomWindow):
         # 点击确认按钮,更新数据库
         startdate = datetime.today()
         enddate = datetime.strptime(self.date_entry.entry.get(), '%Y-%m-%d')
-        days = str((enddate - startdate).days)
+        days = (enddate - startdate).days
         value = [self.task_name_entry.get(),
                  self.date_entry.entry.get(),
                  days,
                  "#080808",
                  ''.join(random.sample('zyxwvutsrqponmlkjihgfedcba1234567890', 5)),
-                 "white"]
+                 "white",
+                 self.check_workday.get(),
+                 self.check_holiday.get()]
+        days = calc_dates(days,value,startdate,enddate)
+        value[2] = str(days)
         self.tile_queue.put(("add_one", value))
         self.tile_queue.put(("refresh_tasks"))
 

@@ -40,7 +40,7 @@ class CustomWindow():
         try:
             self.width = kwargs["width"]
         except:
-            self.width = 300
+            self.width = 400
         try:
             self.height = kwargs["height"]
         except:

@@ -9,6 +9,7 @@
 import functools
 import logging
 import os
+import sys
 import time
 import win32api
 import win32con
@@ -196,7 +197,7 @@ class MainWindow(CustomWindow):
 
         elif content == "NewTaskWindow":
             # 打开新建日程
-            NewTaskWindow(title="新建日程", height=180, tile_queue=self.tile_queue)
+            NewTaskWindow(title="新建日程", height=220, tile_queue=self.tile_queue)
 
         elif content == "reset":
             # 恢复配置
@@ -287,11 +288,12 @@ class MainWindow(CustomWindow):
         self.auto_run.set(self.mysetting_dict['auto_run'][0])
         self.tile_top.set(self.mysetting_dict["tile_top"][0])
         self.taskbar_icon.set(self.mysetting_dict["taskbar_icon"][0])
-        # 新增加的设定
+        # 新增加的允许拖动设定
         try:
             self.allow_move.set(self.mysetting_dict["allow_move"][0])
         except KeyError:
-            self.add_new_default()
+            self.mysetting_dict['allow_move'] = [1]
+            self.allow_move.set(1)
         self.set_allow_move()
         # 贴边设置
         self.tile_auto_margin.set(self.mysetting_dict['tile_auto_margin'][0])
@@ -325,15 +327,6 @@ class MainWindow(CustomWindow):
         # 关闭等待窗体
         self.main_window_queue.put("set_interval_notify")
         self.main_window_queue.put("set_regular_notify")
-
-    def add_new_default(self):
-        """增加新添加的设置内容"""
-        mysetting_dict = SqliteDict(self.exe_dir_path + '/data/settings.sqlite', autocommit=True)
-
-        mysetting_dict['allow_move'] = [1]
-
-        #打开提示窗口
-        PromptWindow(title="设定更新完毕",main_window_queue=self.main_window_queue,text="新版本设定更新完成，将会自动关闭程序",height=150,width=350)
     def reset(self):
         """恢复默认配置或者初始化配置"""
         mydb_dict = SqliteDict(self.exe_dir_path + '/data/database.sqlite', autocommit=True)
