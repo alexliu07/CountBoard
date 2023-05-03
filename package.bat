@@ -1,5 +1,5 @@
 @echo off
-pip install pyinstaller
+pip install pyinstaller chinesecalendar
 mkdir cache
 cd cache
 mkdir hooks
