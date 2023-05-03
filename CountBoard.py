@@ -77,6 +77,7 @@ class MainWindow(CustomWindow):
         self.win_mode = tk.StringVar()
         self.tile_top = tk.IntVar()
         self.allow_move = tk.IntVar()
+        self.auto_delete = tk.IntVar()
         self.taskbar_icon = tk.IntVar()
         self.task_radius = tk.IntVar()
         self.auto_run = tk.IntVar()
@@ -295,6 +296,12 @@ class MainWindow(CustomWindow):
             self.mysetting_dict['allow_move'] = [1]
             self.allow_move.set(1)
         self.set_allow_move()
+        # 新增加的自动删除设定
+        try:
+            self.auto_delete.set(self.mysetting_dict["auto_delete"][0])
+        except KeyError:
+            self.mysetting_dict['auto_delete'] = [0]
+            self.auto_delete.set(0)
         # 贴边设置
         self.tile_auto_margin.set(self.mysetting_dict['tile_auto_margin'][0])
         self.tile_auto_margin_length.set(self.mysetting_dict['tile_auto_margin_length'][0])
@@ -516,16 +523,18 @@ class MainWindow(CustomWindow):
             padding=10
         )
         widget_frame5.pack(fill=tk.X, pady=8)
-        ttk.Checkbutton(widget_frame5, text='是否允许开机自启', variable=self.auto_run, bootstyle="square-toggle",
+        ttk.Checkbutton(widget_frame5, text='允许开机自启', variable=self.auto_run, bootstyle="square-toggle",
                         command=self.set_auto_run).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
-        ttk.Checkbutton(widget_frame5, text='是否开启磁贴的置顶功能', variable=self.tile_top, bootstyle="square-toggle",
+        ttk.Checkbutton(widget_frame5, text='开启磁贴的置顶功能', variable=self.tile_top, bootstyle="square-toggle",
                         command=self.set_tile_top).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
-        ttk.Checkbutton(widget_frame5, text='是否开启磁贴的圆角功能', variable=self.task_radius, onvalue=25, offvalue=0,bootstyle="square-toggle",
+        ttk.Checkbutton(widget_frame5, text='开启磁贴的圆角功能', variable=self.task_radius, onvalue=25, offvalue=0,bootstyle="square-toggle",
                         command=self.set_task_radius).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
-        ttk.Checkbutton(widget_frame5, text='是否显示右键菜单图标(需要重启生效)', variable=self.taskbar_icon, bootstyle="square-toggle",
+        ttk.Checkbutton(widget_frame5, text='显示右键菜单图标(需要重启生效)', variable=self.taskbar_icon, bootstyle="square-toggle",
                         command=self.set_taskbar_icon).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
-        ttk.Checkbutton(widget_frame5, text="是否允许拖动", variable=self.allow_move, bootstyle="square-toggle",
+        ttk.Checkbutton(widget_frame5, text="允许拖动", variable=self.allow_move, bootstyle="square-toggle",
                         command=self.set_allow_move).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
+        ttk.Checkbutton(widget_frame5, text="自动删除已过期的事件", variable=self.auto_delete, bootstyle="square-toggle",
+                        command=self.set_auto_delete).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         # 布局6
         widget_frame6 = ttk.LabelFrame(
             master=lframe,
@@ -681,6 +690,11 @@ class MainWindow(CustomWindow):
             self.tile_queue.put("set_tile_move")
         else:
             self.tile_queue.put("cancel_tile_move")
+
+    def set_auto_delete(self):
+        '''是否自动删除过期事件'''
+        self.mysetting_dict["auto_delete"] = [self.auto_delete.get()]
+        self.tile_queue.put("refresh_tasks")
 
     def set_task_radius(self):
         """是否开启磁贴的圆角功能"""

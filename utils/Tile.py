@@ -30,9 +30,11 @@ def update_mode(setting):
         daymode = 0
     else:
         daymode = 1
-def calc_dates(value,startdate,enddate):
+def calc_dates(value):
     """计算天数"""
     global daymode
+    startdate = datetime.datetime.now().date()
+    enddate = datetime.datetime.strptime(value[1], '%Y-%m-%d').date()
     if daymode == 0:
         startday = startdate
     else:
@@ -431,7 +433,7 @@ class Tasks:
         for key, value in self.mydb_dict.iteritems():
             startdate = datetime.datetime.today()
             enddate = datetime.datetime.strptime(value[1], '%Y-%m-%d')
-            days = calc_dates(value,startdate,enddate)
+            days = calc_dates(value)
             self.mydb_dict[key] = [value[0], value[1], days, value[3], value[4], value[5], value[6], value[7]]
 
     def __get_int_day(self, value):
@@ -470,7 +472,7 @@ class Tasks:
         self.task_main_text = value[0]
         self.task_time_text = value[1]
         update_mode(self.mysetting_dict)
-        self.task_countdown_text = calc_dates(value,datetime.datetime.today().date(),datetime.datetime.strptime(value[1], '%Y-%m-%d').date())
+        self.task_countdown_text = calc_dates(value)
         self.task_color = value[3]
         self.task_tag_name = value[4]  # tag是组件的标识符
         self.task_text_color = value[5]
@@ -597,6 +599,12 @@ class Tasks:
 
 
         for value in sorted(self.mydb_dict.itervalues(), key=self.__get_int_day):
+            # 判断是否需要删除
+            if self.mysetting_dict['auto_delete'][0] == 1:
+                day = int(calc_dates(value))
+                if day < 0:
+                    self.del_one(value[0])
+                    continue
             self.__add_task(value)
 
             self.task_y = self.task_y + self.task_height + self.task_margin_y  # 更新新添加的高度
@@ -733,7 +741,7 @@ class NewTaskWindow(CustomWindow):
                  "white",
                  self.check_workday.get(),
                  self.check_holiday.get()]
-        days = calc_dates(value,startdate,enddate)
+        days = calc_dates(value)
         value[2] = str(days)
         self.tile_queue.put(("add_one", value))
         self.tile_queue.put(("refresh_tasks"))
