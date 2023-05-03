@@ -32,7 +32,7 @@ jobs:
         mkdir cache
         cd cache
         mkdir hooks
-        copy ..\other\hook-apscheduler.py hooks /Y
+        copy ..\other\hook-apscheduler.py hooks
     - name: Start Packaging
       run: |
         pyinstaller -F -i "..\icons\favicon.ico" "..\CountBoard.py" -w --additional-hooks-dir=./hooks
