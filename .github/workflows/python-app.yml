@@ -35,9 +35,9 @@ jobs:
         copy ..\other\hook-apscheduler.py hooks
     - name: Start Packaging
       run: |
+        cd cache
         pyinstaller -F -i "..\icons\favicon.ico" "..\CountBoard.py" -w --additional-hooks-dir=./hooks
-        copy dist\CountBoard.exe .. /Y
+        copy dist\CountBoard.exe ..
     - name: Delete Cache
       run: |
-        cd ..
         rmdir cache /S /Q
