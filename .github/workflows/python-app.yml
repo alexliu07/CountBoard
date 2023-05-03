@@ -40,4 +40,4 @@ jobs:
         copy dist\CountBoard.exe ..
     - name: Delete Cache
       run: |
-        rmdir cache /S /Q
+        rmdir cache -Recurse -Force
