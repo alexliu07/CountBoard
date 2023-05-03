@@ -10,7 +10,7 @@ import queue
 import random
 import tkinter as tk
 import traceback
-from datetime import datetime
+import datetime
 from threading import Thread
 from tkinter import *
 
@@ -23,15 +23,27 @@ from utils.CustomWindow import CustomWindow
 from utils.ttkbootstrap.widgets.date_entry import DateEntry
 from utils.WindowEffect import WindowEffect
 
-def calc_dates(days,value,startdate,enddate):
-    """计算天数"""
-    day = days
-    if day > 0:
-        holidays = len(chinese_calendar.get_holidays(startdate,enddate))
-        workdays = len(chinese_calendar.get_workdays(startdate,enddate))
+daymode = 0
+def update_mode(setting):
+    global daymode
+    if setting['mode'][0] == '普通模式':
+        daymode = 0
     else:
-        holidays = -len(chinese_calendar.get_holidays(enddate,startdate))
-        workdays = -len(chinese_calendar.get_workdays(enddate,startdate))
+        daymode = 1
+def calc_dates(value,startdate,enddate):
+    """计算天数"""
+    global daymode
+    if daymode == 0:
+        startday = startdate
+    else:
+        startday = startdate + datetime.timedelta(days=1)
+    day = (enddate - startday).days
+    if day > 0:
+        holidays = len(chinese_calendar.get_holidays(startday,enddate-datetime.timedelta(days=1)))
+        workdays = len(chinese_calendar.get_workdays(startday,enddate-datetime.timedelta(days=1)))
+    else:
+        holidays = -len(chinese_calendar.get_holidays(enddate+datetime.timedelta(days=1),startdate))
+        workdays = -len(chinese_calendar.get_workdays(enddate+datetime.timedelta(days=1),startdate))
     if value[6] and value[7]:
         pass
     else:
@@ -42,9 +54,9 @@ def calc_dates(days,value,startdate,enddate):
         elif value[7]:
             day = holidays
     return str(day)
+
 class Tile(CustomWindow):
     """磁贴窗口"""
-
     def __init__(self, bg, exe_dir_path, mydb_dict, mysetting_dict, tile_queue, logger, *args, **kwargs):
         self.root = tk.Toplevel()
         super().__init__(*args, **kwargs)
@@ -66,6 +78,7 @@ class Tile(CustomWindow):
         """
         布局初始化(必须在主线程进行的操作，比如设置主题，窗口布局，变量初始化)
         """
+        global daymode
         # 传参
         self.logger = logger
         self.bg = bg
@@ -105,21 +118,21 @@ class Tile(CustomWindow):
         event_x_root = content[0]
         event_y_root = content[1]
         self.menubar.delete(0, END)
-        self.menubar.add_command(label='新建日程', command=self.open_new_winodw)
+        self.menubar.add_command(label='新建日程', command=self.open_new_window)
         if self.tag_name.get() != "":
-            self.menubar.add_command(label='编辑日程', command=self.open_edit_winodw)
-            self.menubar.add_command(label='删除日程', command=self.open_del_winodw)
+            self.menubar.add_command(label='编辑日程', command=self.open_edit_window)
+            self.menubar.add_command(label='删除日程', command=self.open_del_window)
         self.menubar.post(event_x_root, event_y_root)
 
-    def open_new_winodw(self):
+    def open_new_window(self):
         """打开新窗口"""
         self.tile_queue.put("NewTaskWindow")
 
-    def open_edit_winodw(self):
+    def open_edit_window(self):
         """打开编辑窗口"""
         self.tile_queue.put("EditTaskWindow")
 
-    def open_del_winodw(self):
+    def open_del_window(self):
         self.tile_queue.put("DelTaskWindow")
 
     def modify_transparent(self, tile_transparent):
@@ -416,10 +429,9 @@ class Tasks:
     def update_sqlite_time(self):
         # 初始化更新时间
         for key, value in self.mydb_dict.iteritems():
-            startdate = datetime.today()
-            enddate = datetime.strptime(value[1], '%Y-%m-%d')
-            days = (enddate - startdate).days
-            days = calc_dates(days,value,startdate,enddate)
+            startdate = datetime.datetime.today()
+            enddate = datetime.datetime.strptime(value[1], '%Y-%m-%d')
+            days = calc_dates(value,startdate,enddate)
             self.mydb_dict[key] = [value[0], value[1], days, value[3], value[4], value[5], value[6], value[7]]
 
     def __get_int_day(self, value):
@@ -457,15 +469,12 @@ class Tasks:
         """添加每一项任务"""
         self.task_main_text = value[0]
         self.task_time_text = value[1]
-        mode = self.mysetting_dict["mode"][0]
-        if mode == "普通模式":
-            self.task_countdown_text = str(int(value[2]) + 1)
-        else:
-            self.task_countdown_text = value[2]
+        update_mode(self.mysetting_dict)
+        self.task_countdown_text = calc_dates(value,datetime.datetime.today().date(),datetime.datetime.strptime(value[1], '%Y-%m-%d').date())
         self.task_color = value[3]
         self.task_tag_name = value[4]  # tag是组件的标识符
         self.task_text_color = value[5]
-        self.task_text_color = value[5]
+
 
         self.__round_rectangle(
             self.task_margin_x,
@@ -713,8 +722,8 @@ class NewTaskWindow(CustomWindow):
             self.tile_queue.put(("del_one", self.value[0]))
 
         # 点击确认按钮,更新数据库
-        startdate = datetime.today()
-        enddate = datetime.strptime(self.date_entry.entry.get(), '%Y-%m-%d')
+        startdate = datetime.datetime.today()
+        enddate = datetime.datetime.strptime(self.date_entry.entry.get(), '%Y-%m-%d')
         days = (enddate - startdate).days
         value = [self.task_name_entry.get(),
                  self.date_entry.entry.get(),
@@ -724,7 +733,7 @@ class NewTaskWindow(CustomWindow):
                  "white",
                  self.check_workday.get(),
                  self.check_holiday.get()]
-        days = calc_dates(days,value,startdate,enddate)
+        days = calc_dates(value,startdate,enddate)
         value[2] = str(days)
         self.tile_queue.put(("add_one", value))
         self.tile_queue.put(("refresh_tasks"))
