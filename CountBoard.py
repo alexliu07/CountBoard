@@ -24,6 +24,7 @@ from utils.Tile import *
 from utils.CustomWindow import CustomWindow
 import utils.ttkbootstrap as ttk
 from utils.ttkbootstrap.style import utility
+from utils.updater import checkUpdate
 
 
 class MainWindow(CustomWindow):
@@ -736,11 +737,6 @@ class MainWindow(CustomWindow):
 
         ttk.Label(
             master=widget_frame4,
-            text='当前版本：CountBoard V' + self.version
-        ).pack(side=tk.TOP, fill=tk.X)
-
-        ttk.Label(
-            master=widget_frame4,
             text='更新时间：2023年2月18日'
         ).pack(side=tk.TOP, fill=tk.X)
 
@@ -760,7 +756,81 @@ class MainWindow(CustomWindow):
             text='项目地址：https://github.com/alexliu07/CountBoard'
         ).pack(side=tk.TOP, fill=tk.X)
 
+        # 检测更新
+        widget_frame8 = ttk.LabelFrame(
+            master=tab,
+            text='软件更新',
+            padding=10
+        )
+        widget_frame8.pack(fill=tk.X, pady=15)
+        ttk.Label(
+            master=widget_frame8,
+            text='当前版本：CountBoard V' + self.version
+        ).pack(side=tk.TOP, fill=tk.X)
+        # 检测更新文字
+        self.getting_update = ttk.Frame(master=widget_frame8)
+        # self.getting_update.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.getting_update,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        ttk.Label(
+            master=self.getting_update,
+            text='正在检测更新...'
+        ).pack(side=tk.TOP, fill=tk.X)
+        # 无更新提示文字
+        self.up_to_date = ttk.Frame(master=widget_frame8)
+        #self.up_to_date.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.up_to_date,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        ttk.Label(
+            master=self.up_to_date,
+            text='CountBoard 已更新到最新版本'
+        ).pack(side=tk.TOP, fill=tk.X)
+        # 更新错误提示
+        self.update_error = ttk.Frame(master=widget_frame8)
+        #self.update_error.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.update_error,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        self.error_msg = '下载/检测更新失败，错误信息：\n{}'
+        self.error_text = ttk.Label(master=self.update_error)
+        self.error_text.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.update_error,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        self.retry_btn = ttk.Button(
+            master=self.update_error,
+            text='重试更新',
+            bootstyle='outline',
+            command=self.newtask__,width=10)
+        self.retry_btn.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
+        # 有更新提示
+        self.need_update = ttk.Frame(master=widget_frame8)
+        #self.need_update.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.need_update,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        self.update_msg = '发现新版本：Countboard V{}，更新内容：\n\n{}'
+        self.update_text = ttk.Label(master=self.need_update)
+        self.update_text.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.need_update,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        self.update_process = ttk.Label(master=self.need_update,font=('Microsoft Yahei',10,'bold'))
+        self.update_process.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
+        self.update_thread = Thread(target=self.check_update)
+        #self.update_thread.start()
         return tab
+    def check_update(self):
+        """检测更新"""
+        checkUpdate(self)
 
     '''-----------------------------------提醒页面-----------------------------------------------'''
 
@@ -1168,7 +1238,7 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.4",
+            version="1.5",
             logger=logger,
             exe_dir_path=exe_dir_path,
             show=0,)
