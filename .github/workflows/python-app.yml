@@ -38,17 +38,15 @@ jobs:
     - name: Delete Cache
       run: |
         rmdir cache -Recurse -Force
-    - name: Create ZIP Archive
-      run: |
-        Compress-Archive -Path "CountBoard.exe","icons" -DestinationPath "CountBoard.zip" -Force
-        Compress-Archive -Path "CountBoard.exe" -DestinationPath "app-update.zip" -Force
-    - name: Upload Main Program Archive
+    - name: Upload Main Program
       uses: actions/upload-artifact@v3.1.2
       with:
         name: CountBoard
-        path: CountBoard.zip
-    - name: Upload APP-Update Archive
+        path: |
+          icons
+          CountBoard.exe
+    - name: Upload APP-Update
       uses: actions/upload-artifact@v3.1.2
       with:
         name: app-update
-        path: app-update.zip
+        path: CountBoard.exe
