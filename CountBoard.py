@@ -139,7 +139,6 @@ class MainWindow(CustomWindow):
 
     def refresh_(self):
         """每天凌晨刷新数据库"""
-        self.tile_queue.put("update_sqlite")
         self.tile_queue.put("refresh_tasks")
 
     '''-----------------------------------更新UI 线程-----------------------------------------------'''
