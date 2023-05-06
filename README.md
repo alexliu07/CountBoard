@@ -71,5 +71,5 @@ CountBoard 是一个基于Tkinter开源的桌面日程倒计时应用。
 
 ## 如何打包
 1. 安装`Python`
-2. 下载/克隆本仓库
-3. 运行`package.bat`
+2. 导入/分支本仓库
+3. 在Actions里面运行Package App
