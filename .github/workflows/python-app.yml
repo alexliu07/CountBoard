@@ -1,0 +1,53 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Package App
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.8"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller chinesecalendar APScheduler Pillow pywin10 pywin32 requests sqlitedict
+    - name: Download And Extract UPX
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip" -OutFile .\UPX.zip
+        Expand-Archive .\UPX.zip -DestinationPath .
+        ren .\upx-4.0.2-win64 UPX
+    - name: Start Packaging
+      run: |
+        mkdir cache
+        cd cache
+        mkdir hooks
+        copy ..\other\hook-apscheduler.py hooks
+        pyinstaller --upx-dir "..\UPX" -F -i "..\icons\favicon.ico" "..\CountBoard.py" -w --additional-hooks-dir=./hooks
+        copy dist\CountBoard.exe ..
+        cd ..
+        rmdir cache -Recurse -Force
+    - name: Upload Main Program
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        name: CountBoard
+        path: |
+          icons
+          CountBoard.exe
+    - name: Upload APP-Update
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        name: app-update
+        path: CountBoard.exe
