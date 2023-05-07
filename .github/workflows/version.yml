@@ -29,4 +29,9 @@ jobs:
       env:
         nme: ${{steps.versionGet.outputs.name}}
       run:
-        echo $nme
+        echo $nme >> test.txt
+    - name: Upload
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        name: ${{steps.versionGet.outputs.name}}
+        path: test.txt
