@@ -11,7 +11,6 @@ permissions:
 
 jobs:
   build:
-
     runs-on: windows-latest
 
     steps:
@@ -40,14 +39,16 @@ jobs:
         cd ..
         rmdir cache -Recurse -Force
     - name: Get Version
+      id: versionGet
       run: |
         $versionString = Select-String -Path .\CountBoard.py "\d+(\.\d){2}"
         $versionString -match "\d+(\.\d){2}"
-        $name = -join ('CountBoard-V',$matches[0])
+        $name = -join ('name=CountBoard-V',$matches[0])
+        echo $name >> "$GITHUB_OUTPUT"
     - name: Upload Main Program
       uses: actions/upload-artifact@v3.1.2
       with:
-        name: $name
+        name: ${{steps.versionGet.outputs.name}}
         path: |
           icons
           CountBoard.exe
