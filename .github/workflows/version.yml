@@ -12,7 +12,6 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.8
@@ -26,10 +25,10 @@ jobs:
         $versionString -match "\d+(\.\d){2}"
         $GITHUB_OUTPUT = -join ('name=CountBoard-V',$matches[0])
     - name: Output
-      env:
-        nme: ${{steps.versionGet.outputs.name}}
       run:
         echo $nme >> test.txt
+      env:
+        nme: ${{ steps.versionGet.outputs.name }}
     - name: Upload
       uses: actions/upload-artifact@v3.1.2
       with:
