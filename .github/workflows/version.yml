@@ -24,10 +24,9 @@ jobs:
       run: |
         $versionString = Select-String -Path .\CountBoard.py "\d+(\.\d){2}"
         $versionString -match "\d+(\.\d){2}"
-        $name = -join ('name=CountBoard-V',$matches[0])
-        echo $name >> "$GITHUB_OUTPUT"
+        $GITHUB_OUTPUT = -join ('name=CountBoard-V',$matches[0])
     - name: Output
       env:
         nme: ${{steps.versionGet.outputs.name}}
       run:
-        echo $nme
+        echo $nme >>
