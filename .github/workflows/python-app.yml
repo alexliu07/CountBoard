@@ -39,10 +39,15 @@ jobs:
         copy dist\CountBoard.exe ..
         cd ..
         rmdir cache -Recurse -Force
+    - name: Get Version
+      run: |
+        $versionString = Select-String -Path .\CountBoard.py "\d+(\.\d){2}"
+        $versionString -match "\d+(\.\d){2}"
+        $name = -join ('CountBoard-V',$matches[0])
     - name: Upload Main Program
       uses: actions/upload-artifact@v3.1.2
       with:
-        name: CountBoard
+        name: $name
         path: |
           icons
           CountBoard.exe
