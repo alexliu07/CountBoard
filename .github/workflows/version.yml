@@ -23,7 +23,8 @@ jobs:
       run: |
         $versionString = Select-String -Path .\CountBoard.py "\d+(\.\d){2}"
         $versionString -match "\d+(\.\d){2}"
-        echo "name=CountBoard-V$matches[0]" >> $env:GITHUB_OUTPUT
+        $version = $matches[0]
+        echo "name=CountBoard-V$version" >> $env:GITHUB_OUTPUT
     - name: Output
       run:
         echo $nme
