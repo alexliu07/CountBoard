@@ -23,14 +23,9 @@ jobs:
       run: |
         $versionString = Select-String -Path .\CountBoard.py "\d+(\.\d){2}"
         $versionString -match "\d+(\.\d){2}"
-        $GITHUB_OUTPUT = -join ('name=CountBoard-V',$matches[0])
+        echo "name=CountBoard-V$matches[0]" >> $env:GITHUB_OUTPUT
     - name: Output
       run:
-        echo $nme >> test.txt
+        echo $nme
       env:
         nme: ${{ steps.versionGet.outputs.name }}
-    - name: Upload
-      uses: actions/upload-artifact@v3.1.2
-      with:
-        name: test
-        path: test.txt
