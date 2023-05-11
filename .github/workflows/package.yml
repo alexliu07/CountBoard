@@ -66,7 +66,7 @@ jobs:
         path: CountBoard.exe
     - name: Create Draft Release
       id: create_release
-      if: ${{ github.events.inputs.publish }}
+      if: ${{ inputs.publish }}
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,7 +78,7 @@ jobs:
         prerelease: false
     - name: Release Main Program
       id: upload-release-main
-      if: ${{ github.events.inputs.publish }}
+      if: ${{ inputs.publish }}
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -89,7 +89,7 @@ jobs:
         asset_content_type: application/zip
     - name: Release App Update
       id: upload-release-update
-      if: ${{ github.events.inputs.publish }}
+      if: ${{ inputs.publish }}
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
