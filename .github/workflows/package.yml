@@ -83,7 +83,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./${{ steps.versionGet.outputs.name }}.zip
+        asset_path: ${{ steps.versionGet.outputs.name }}.zip
         asset_name: ${{ steps.versionGet.outputs.name }}.zip
         asset_content_type: application/zip
     - name: Release App Update
@@ -94,6 +94,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./app-update.zip
+        asset_path: app-update.zip
         asset_name: app-update.zip
         asset_content_type: application/zip
