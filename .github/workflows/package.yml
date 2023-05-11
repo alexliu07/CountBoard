@@ -24,7 +24,7 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.8"
-    - name: Install dependencies
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller chinesecalendar APScheduler Pillow pywin10 pywin32 requests sqlitedict
@@ -33,7 +33,7 @@ jobs:
         Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip" -OutFile .\UPX.zip
         Expand-Archive .\UPX.zip -DestinationPath .
         ren .\upx-4.0.2-win64 UPX
-    - name: Start Packaging
+    - name: Package App
       run: |
         mkdir cache
         cd cache
@@ -63,6 +63,11 @@ jobs:
       with:
         name: app-update
         path: CountBoard.exe
+    - name: Create ZIP Archive
+      if: ${{ inputs.publish }}
+      run:
+        Compress-Archive -Path "CountBoard.exe","icons" -DestinationPath "CountBoard.zip" -Force
+        Compress-Archive -Path "CountBoard.exe" -DestinationPath "app-update.zip" -Force
     - name: Create Draft Release
       id: create_release
       if: ${{ inputs.publish }}
