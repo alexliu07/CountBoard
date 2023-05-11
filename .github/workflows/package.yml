@@ -5,6 +5,12 @@ name: Package App
 
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish this release"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -45,6 +51,7 @@ jobs:
         $versionString -match "\d+(\.\d){2}"
         $version = $matches[0]
         echo "name=CountBoard-V$version" >> $env:GITHUB_OUTPUT
+        echo "version=$version" >> $env:GITHUB_OUTPUT
     - name: Upload Main Program
       uses: actions/upload-artifact@v3.1.2
       with:
@@ -57,3 +64,37 @@ jobs:
       with:
         name: app-update
         path: CountBoard.exe
+    - name: Create Draft Release
+      id: create_release
+      if: ${{ github.events.inputs.publish }}
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.versionGet.outputs.version }}
+        release_name: ${{ steps.versionGet.outputs.version }}
+        body: versionText.md
+        draft: false
+        prerelease: false
+    - name: Release Main Program
+      id: upload-release-main
+      if: ${{ github.events.inputs.publish }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ steps.versionGet.outputs.name }}.zip
+        asset_name: ${{ steps.versionGet.outputs.name }}.zip
+        asset_content_type: application/zip
+    - name: Release App Update
+      id: upload-release-update
+      if: ${{ github.events.inputs.publish }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./app-update.zip
+        asset_name: app-update.zip
+        asset_content_type: application/zip
