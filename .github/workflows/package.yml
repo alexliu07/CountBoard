@@ -12,8 +12,7 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: read
+permissions: write-all
 
 jobs:
   build:
