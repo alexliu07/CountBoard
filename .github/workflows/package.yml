@@ -72,7 +72,7 @@ jobs:
       with:
         tag_name: ${{ steps.versionGet.outputs.version }}
         release_name: ${{ steps.versionGet.outputs.version }}
-        body: versionText.md
+        body_path: versionText.md
         draft: false
         prerelease: false
     - name: Release Main Program
