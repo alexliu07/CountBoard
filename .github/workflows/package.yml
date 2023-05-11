@@ -65,8 +65,8 @@ jobs:
         path: CountBoard.exe
     - name: Create ZIP Archive
       if: ${{ inputs.publish }}
-      run:
-        Compress-Archive -Path "CountBoard.exe","icons" -DestinationPath "CountBoard.zip" -Force
+      run: |
+        Compress-Archive -Path "CountBoard.exe","icons" -DestinationPath "main.zip" -Force
         Compress-Archive -Path "CountBoard.exe" -DestinationPath "app-update.zip" -Force
     - name: Create Draft Release
       id: create_release
@@ -88,7 +88,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ steps.versionGet.outputs.name }}.zip
+        asset_path: main.zip
         asset_name: ${{ steps.versionGet.outputs.name }}.zip
         asset_content_type: application/zip
     - name: Release App Update
