@@ -11,6 +11,14 @@ on:
         required: true
         default: false
         type: boolean
+      mode:
+        description: 'Mode Select'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
 
 permissions: write-all
 
@@ -33,13 +41,25 @@ jobs:
         Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip" -OutFile .\UPX.zip
         Expand-Archive .\UPX.zip -DestinationPath .
         ren .\upx-4.0.2-win64 UPX
-    - name: Package App
+    - name: Package App (Release)
+      if: ${{ inputs.mode }} == 'release'
       run: |
         mkdir cache
         cd cache
         mkdir hooks
         copy ..\other\hook-apscheduler.py hooks
         pyinstaller --upx-dir "..\UPX" -F -i "..\icons\favicon.ico" "..\CountBoard.py" -w --additional-hooks-dir=./hooks
+        copy dist\CountBoard.exe ..
+        cd ..
+        rmdir cache -Recurse -Force
+    - name: Package App (Debug)
+      if: ${{ inputs.mode }} == 'debug'
+      run: |
+        mkdir cache
+        cd cache
+        mkdir hooks
+        copy ..\other\hook-apscheduler.py hooks
+        pyinstaller --upx-dir "..\UPX" -F -i "..\icons\favicon.ico" "..\CountBoard.py" --additional-hooks-dir=./hooks
         copy dist\CountBoard.exe ..
         cd ..
         rmdir cache -Recurse -Force
@@ -59,6 +79,7 @@ jobs:
           icons
           CountBoard.exe
     - name: Upload APP-Update
+      if: ${{ inputs.mode }} == 'release'
       uses: actions/upload-artifact@v3.1.2
       with:
         name: app-update
