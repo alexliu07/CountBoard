@@ -6,6 +6,7 @@
 @Date ：2021/11/8 11:00
 @contact: g1695698547@163.com
 """
+import ctypes
 import functools
 import logging
 import os
@@ -290,7 +291,7 @@ class MainWindow(CustomWindow):
         self.taskbar_icon.set(self.mysetting_dict["taskbar_icon"][0])
         # 通过检索文件确认是否开启自启动
         shortcutPath = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'.format(os.environ.get('AppData'))
-        if os.path.exists('{}CountBoard.lnk'.format(shortcutPath)):
+        if os.path.exists('{}CountBoard'.format(shortcutPath)):
             self.auto_run.set(1)
         else:
             self.auto_run.set(0)
@@ -659,18 +660,32 @@ class MainWindow(CustomWindow):
         self.mysetting_dict["tile_auto_margin_length"] = [self.tile_auto_margin_length.get()]
         self.tile_queue.put(("modify_offset", self.tile_auto_margin_length.get()))
 
+    def is_admin(self):
+        '''
+        是否启用管理员权限
+        :return: bool
+        '''
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except:
+            return False
+
     def set_auto_run(self):
         """是否开启软件自启"""
+        #是否启用管理员权限
+        if self.is_admin():
+            shortcutPath = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'.format(os.environ.get('AppData'))
+            mainPath = str(Path(self.exe_dir_path).joinpath("CountBoard.exe"))  # 要添加的exe路径
 
-        shortcutPath = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'.format(os.environ.get('AppData'))
-        mainPath = str(Path(self.exe_dir_path).joinpath("CountBoard.exe"))  # 要添加的exe路径
-
-        if self.auto_run.get():
-            os.system('mklink "{}CountBoard.lnk" "{}"'.format(shortcutPath,mainPath))
-            print('开启软件自启动')
+            if self.auto_run.get():
+                os.system('mklink "{}CountBoard" "{}"'.format(shortcutPath,mainPath))
+                print('开启软件自启动')
+            else:
+                os.remove('{}CountBoard'.format(shortcutPath))
+                print('关闭软件自启动')
         else:
-            os.remove('{}CountBoard.lnk'.format(shortcutPath))
-            print('关闭软件自启动')
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, __file__, None, 1)
+            self.main_window_queue.put('exit')
 
     def set_tile_auto_margin(self):
         """是否开启自动贴边"""
