@@ -42,7 +42,7 @@ jobs:
         Expand-Archive .\UPX.zip -DestinationPath .
         ren .\upx-4.0.2-win64 UPX
     - name: Package App (Release)
-      if: ${{ inputs.mode }} == 'release'
+      if: ${{ inputs.mode }} == "release"
       run: |
         mkdir cache
         cd cache
@@ -53,7 +53,7 @@ jobs:
         cd ..
         rmdir cache -Recurse -Force
     - name: Package App (Debug)
-      if: ${{ inputs.mode }} == 'debug'
+      if: ${{ inputs.mode }} == "debug"
       run: |
         mkdir cache
         cd cache
