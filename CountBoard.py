@@ -286,9 +286,20 @@ class MainWindow(CustomWindow):
         self.win_mode.set(self.mysetting_dict["win_mode"][0])
         # 其他设置
         self.task_radius.set(self.mysetting_dict["task_radius"][0])
-        self.auto_run.set(self.mysetting_dict['auto_run'][0])
         self.tile_top.set(self.mysetting_dict["tile_top"][0])
         self.taskbar_icon.set(self.mysetting_dict["taskbar_icon"][0])
+        # 通过检索文件确认是否开启自启动
+        shortcutPath = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'.format(os.environ.get('AppData'))
+        if os.path.exists('{}CountBoard.lnk'.format(shortcutPath)):
+            self.auto_run.set(1)
+        else:
+            self.auto_run.set(0)
+        # 删除原有设定
+        try:
+            if self.mysetting_dict['auto_run'][0] == 1 or self.mysetting_dict['auto_run'][0] == 0:
+                self.mysetting_dict.__delitem__('auto_run')
+        except KeyError:
+            pass
         # 新增加的允许拖动设定
         try:
             self.allow_move.set(self.mysetting_dict["allow_move"][0])
@@ -650,23 +661,16 @@ class MainWindow(CustomWindow):
 
     def set_auto_run(self):
         """是否开启软件自启"""
-        self.mysetting_dict["auto_run"] = [self.auto_run.get()]
 
-        name = 'CountBoard'  # 要添加的项值名称
-        path = str(Path(self.exe_dir_path).joinpath("CountBoard.exe"))  # 要添加的exe路径
-
-        KeyName = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"  # 注册表项名
-        key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER, KeyName, 0, win32con.KEY_ALL_ACCESS)
+        shortcutPath = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'.format(os.environ.get('AppData'))
+        mainPath = str(Path(self.exe_dir_path).joinpath("CountBoard.exe"))  # 要添加的exe路径
 
         if self.auto_run.get():
-            win32api.RegSetValueEx(key, name, 0, win32con.REG_SZ, path)
+            os.system('mklink "{}CountBoard.lnk" "{}"'.format(shortcutPath,mainPath))
             print('开启软件自启动')
-            print(win32api.RegQueryValueEx(key, name))
         else:
-            # 偷懒了，不想修改注册表直接删除了事
-            win32api.RegDeleteValue(key, name)
+            os.remove('{}CountBoard.lnk'.format(shortcutPath))
             print('关闭软件自启动')
-        win32api.RegCloseKey(key)
 
     def set_tile_auto_margin(self):
         """是否开启自动贴边"""
@@ -1237,7 +1241,7 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.5.1",
+            version="1.5.2",
             logger=logger,
             exe_dir_path=exe_dir_path,
             show=0,)
