@@ -40,5 +40,5 @@ jobs:
         if: ${{ github.event.inputs.mode }} == 'release'
         run: echo release
       - name: Publish
-        if: ${{ github.event.inputs.publish }}
+        if: ${{ inputs.publish }}
         run: echo publish
