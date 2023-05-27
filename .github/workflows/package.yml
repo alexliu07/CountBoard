@@ -47,8 +47,8 @@ jobs:
         cd cache
         mkdir hooks
         copy ..\other\hook-apscheduler.py hooks
-        if (${{ inputs.mode }} -eq 'release'){pyinstaller --upx-dir "..\UPX" -F -i "..\icons\favicon.ico" "..\CountBoard.py" -w --additional-hooks-dir=./hooks}
-        if (${{ inputs.mode }} -eq 'debug'){pyinstaller --upx-dir "..\UPX" -F -i "..\icons\favicon.ico" "..\CountBoard.py" --additional-hooks-dir=./hooks}  
+        if ('${{ inputs.mode }}' -eq 'release'){pyinstaller --upx-dir "..\UPX" -F -i "..\icons\favicon.ico" "..\CountBoard.py" -w --additional-hooks-dir=./hooks}
+        if ('${{ inputs.mode }}' -eq 'debug'){pyinstaller --upx-dir "..\UPX" -F -i "..\icons\favicon.ico" "..\CountBoard.py" --additional-hooks-dir=./hooks}  
         copy dist\CountBoard.exe ..
         cd ..
         rmdir cache -Recurse -Force
