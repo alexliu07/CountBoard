@@ -34,11 +34,11 @@ jobs:
         with:
           python-version: "3.8"
       - name: Debug
-        if: ${{ github.event.inputs.mode }} == 'debug'
-        run: echo debug
+        if: ${{ inputs.mode }} == 'debug'
+        run: echo ${{ inputs.mode }}
       - name: Release
-        if: ${{ github.event.inputs.mode }} == 'release'
-        run: echo release
+        if: ${{ inputs.mode }} == 'release'
+        run: echo ${{ inputs.mode }}
       - name: Publish
         if: ${{ inputs.publish }}
         run: echo publish
