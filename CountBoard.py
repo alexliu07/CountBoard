@@ -10,6 +10,7 @@ import ctypes
 import functools
 import logging
 import os
+import platform
 import sys
 import time
 import win32api
@@ -367,8 +368,6 @@ class MainWindow(CustomWindow):
         mysetting_dict['mode'] = ["普通模式"]
         mysetting_dict['win_mode'] = ["独立窗体"]
 
-        mysetting_dict['auto_run'] = [0]
-
         mysetting_dict['task_geometry'] = [(276, 60, 12, 12)]
         mysetting_dict['task_radius'] = [0]
         mysetting_dict['time_scale'] = [8]
@@ -536,8 +535,10 @@ class MainWindow(CustomWindow):
         )
         widget_frame5.pack(fill=tk.X, pady=8)
 
-        ttk.Checkbutton(widget_frame5, text='允许开机自启', variable=self.auto_run, bootstyle="square-toggle",
-                        command=self.set_auto_run).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
+        #若系统符合要求则显示开机自启选项
+        if platform.release() == '10':
+            ttk.Checkbutton(widget_frame5, text='允许开机自启', variable=self.auto_run, bootstyle="square-toggle",
+                            command=self.set_auto_run).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         ttk.Checkbutton(widget_frame5, text='开启磁贴的置顶功能', variable=self.tile_top, bootstyle="square-toggle",
                         command=self.set_tile_top).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         ttk.Checkbutton(widget_frame5, text='开启磁贴的圆角功能', variable=self.task_radius, onvalue=25, offvalue=0,bootstyle="square-toggle",
