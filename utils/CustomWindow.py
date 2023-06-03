@@ -56,7 +56,7 @@ class CustomWindow():
         try:
             self.icon = kwargs["icon"]
         except:
-            self.icon = os.path.join(os.path.dirname(sys.argv[0]), "icons/favicon.ico")
+            self.icon = os.path.join(os.environ.get('AppData'), "Countboard/icons/favicon.ico")
         try:
             self.topmost = kwargs["topmost"]
         except:

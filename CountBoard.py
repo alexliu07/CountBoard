@@ -19,28 +19,29 @@ import win32api
 from queue import Queue
 import webbrowser
 import traceback
-from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 from pywin10 import TaskBarIcon
 from sqlitedict import SqliteDict
+
+import utils.Resources
 from utils.Tile import *
 from utils.CustomWindow import CustomWindow
 import utils.ttkbootstrap as ttk
 from utils.ttkbootstrap.style import utility
-from utils.updater import checkUpdate
+from utils.Updater import checkUpdate
 
 
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
-    def __init__(self, version, icon, exe_dir_path, *args, **kwargs):
+    def __init__(self, version, exe_dir_path, work_dir, logger, *args, **kwargs):
         self.root = tk.Tk()
 
         self.style = ttk.Style()
         super().__init__(*args, **kwargs)
 
         # 布局初始化
-        self.__init__2(version, icon, exe_dir_path)
+        self.__init__2(version, exe_dir_path, work_dir, logger)
 
         # 为了使各个窗体独立开来，让其互不干扰，通过队列实现窗体之间的通信。
         self.tile_queue = Queue()
@@ -63,19 +64,16 @@ class MainWindow(CustomWindow):
         self.root.mainloop()
 
     '''-----------------------------------布局、基本设置-----------------------------------------------'''
-    def createFolder(self,path):
-        '''创建新文件夹'''
-        if not os.path.exists(path):
-            os.mkdir(path)
 
-    def __init__2(self, version, icon, exe_dir_path):
+    def __init__2(self, version, exe_dir_path, work_dir, logger):
         """
         布局初始化(一个窗体基本的设置:比如设置主题，窗口布局,变量初始化(当前不赋值))
         """
         # 传参
         self.version = version
         self.exe_dir_path = exe_dir_path
-        self.icon = icon
+        self.logger = logger
+        self.work_dir = work_dir
 
         # 变量初始化（在耗时线程中赋值）
         self.theme_name = tk.StringVar()
@@ -105,10 +103,6 @@ class MainWindow(CustomWindow):
         self.interval_notify_content = tk.StringVar()
         self.auto_run_script_path = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\CountBoard.vbs'.format(os.environ.get('AppData'))
 
-        # 工作目录
-        self.work_dir = os.environ.get('AppData')+"\\CountBoard"
-        self.createFolder(self.work_dir)
-        self.createFolder('{}\\data'.format(self.work_dir))
         # 数据迁移
         if os.path.exists(self.exe_dir_path + '\\data'):
             settingFile = '{}\\data\\settings.sqlite'
@@ -116,10 +110,9 @@ class MainWindow(CustomWindow):
             shutil.copy(settingFile.format(self.exe_dir_path),settingFile.format(self.work_dir))
             shutil.copy(dbFile.format(self.exe_dir_path),dbFile.format(self.work_dir))
             shutil.rmtree('{}\\data'.format(self.exe_dir_path))
+        if os.path.exists(self.exe_dir_path + '\\logs'):
             shutil.rmtree('{}\\logs'.format(self.exe_dir_path))
 
-        # 日志记录器
-        self.logger = my_logs(self.work_dir)
         # 取消主窗体置顶
         self.root.wm_attributes('-topmost', 0)
         # 界面布局
@@ -424,16 +417,16 @@ class MainWindow(CustomWindow):
             icon=self.icon,
             hover_text=self.title,
             menu_options=[
-                ['退出', self.exe_dir_path + "\\icons\\exit.ico", self.exit__, 1],  # 菜单项格式:["菜单项名称","菜单项图标路径或None",回调函数或者子菜单列表,id数字(随便写不要重复即可)]
+                ['退出', self.work_dir + "\\icons\\exit.ico", self.exit__, 1],  # 菜单项格式:["菜单项名称","菜单项图标路径或None",回调函数或者子菜单列表,id数字(随便写不要重复即可)]
 
                 ["分隔符", None, None, 222],
-                ['恢复默认', self.exe_dir_path + "\\icons\\recovery.ico", self.reset__, 16],
-                ['开源地址', self.exe_dir_path + "\\icons\\github.ico", self.github__, 42],
-                ['主界面', self.exe_dir_path + "\\icons\\home.ico", self.show__, 2],
+                ['恢复默认', self.work_dir + "\\icons\\recovery.ico", self.reset__, 16],
+                ['开源地址', self.work_dir + "\\icons\\github.ico", self.github__, 42],
+                ['主界面', self.work_dir + "\\icons\\home.ico", self.show__, 2],
 
                 ["分隔符", None, None, 111],
-                ['删除全部', self.exe_dir_path + "\\icons\\del.ico", self.delall__, 7],
-                ['新建日程', self.exe_dir_path + "\\icons\\edit.ico", self.newtask__, 6]
+                ['删除全部', self.work_dir + "\\icons\\del.ico", self.delall__, 7],
+                ['新建日程', self.work_dir + "\\icons\\edit.ico", self.newtask__, 6]
             ],
             menu_style="iconic" if taskbar_icon else "normal",
             icon_x_pad=12
@@ -1272,31 +1265,52 @@ def my_logs(exe_dir_path):
 
     return logger
 
+def createFolder(path):
+    '''创建新文件夹'''
+    if not os.path.exists(path):
+        os.mkdir(path)
 
 @just_one_instance
 def main():
+    # 工作目录
+    work_dir = os.environ.get('AppData')+"\\CountBoard"
+    createFolder(work_dir)
+    createFolder('{}\\data'.format(work_dir))
+
+    # 日志记录器
+    logger = my_logs(work_dir)
+
     # pathlib可以根据平台自动转换斜杠，不过返回的不是str，还需要转化
     exe_dir_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-    print(exe_dir_path)
+    logger.info(exe_dir_path)
+
+    # 资源解压
+    if not os.path.exists(work_dir + '\\icons'):
+        os.mkdir(work_dir + '\\icons')
+        utils.Resources.extract_icons(work_dir)
+    if os.path.exists(exe_dir_path + '\\icons'):
+        shutil.rmtree(exe_dir_path + '\\icons')
 
     # 获取屏幕信息
     screen_info = win32api.GetMonitorInfo(win32api.MonitorFromPoint((0, 0)))
-    print(screen_info)
+    logger.info(screen_info)
 
     try:
         MainWindow(
             title="CountBoard",
-            icon=str(Path(exe_dir_path).joinpath("icons/favicon.ico")),
+            icon=work_dir + '\\icons\\favicon.ico',
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.5.3",
+            version="1.5.4",
             exe_dir_path=exe_dir_path,
+            work_dir=work_dir,
+            logger=logger,
             show=0
         )
 
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
     utility.enable_high_dpi_awareness()
