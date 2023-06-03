@@ -63,6 +63,10 @@ class MainWindow(CustomWindow):
         self.root.mainloop()
 
     '''-----------------------------------布局、基本设置-----------------------------------------------'''
+    def createFolder(self,path):
+        '''创建新文件夹'''
+        if not os.path.exists(path):
+            os.mkdir(path)
 
     def __init__2(self, version, icon, exe_dir_path):
         """
@@ -103,18 +107,16 @@ class MainWindow(CustomWindow):
 
         # 工作目录
         self.work_dir = os.environ.get('AppData')+"\\CountBoard"
-        if not os.path.exists(self.work_dir):
-            os.mkdir(self.work_dir)
-            os.mkdir('{}\\data'.format(self.work_dir))
-            os.mkdir('{}\\logs'.format(self.work_dir))
-            # 数据迁移
-            if os.path.exists(self.exe_dir_path + '/data'):
-                settingFile = '{}\\data\\settings.sqlite'
-                dbFile = '{}\\data\\database.sqlite'
-                shutil.copy(settingFile.format(self.exe_dir_path),settingFile.format(self.work_dir))
-                shutil.copy(dbFile.format(self.exe_dir_path),dbFile.format(self.work_dir))
-                shutil.rmtree('{}\\data'.format(self.exe_dir_path))
-                shutil.rmtree('{}\\logs'.format(self.exe_dir_path))
+        self.createFolder(self.work_dir)
+        self.createFolder('{}\\data'.format(self.work_dir))
+        # 数据迁移
+        if os.path.exists(self.exe_dir_path + '\\data'):
+            settingFile = '{}\\data\\settings.sqlite'
+            dbFile = '{}\\data\\database.sqlite'
+            shutil.copy(settingFile.format(self.exe_dir_path),settingFile.format(self.work_dir))
+            shutil.copy(dbFile.format(self.exe_dir_path),dbFile.format(self.work_dir))
+            shutil.rmtree('{}\\data'.format(self.exe_dir_path))
+            shutil.rmtree('{}\\logs'.format(self.exe_dir_path))
 
         # 日志记录器
         self.logger = my_logs(self.work_dir)
