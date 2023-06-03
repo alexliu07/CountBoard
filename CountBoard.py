@@ -10,6 +10,7 @@ import ctypes
 import functools
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -383,7 +384,11 @@ class MainWindow(CustomWindow):
 
         mysetting_dict['theme_name'] = ["sandstone"]
         mysetting_dict['mode'] = ["普通模式"]
-        mysetting_dict['win_mode'] = ["独立窗体"]
+        # 根据系统平台选择模式
+        if platform.release() == '10':
+            mysetting_dict['win_mode'] = ["独立窗体"]
+        else:
+            mysetting_dict['win_mode'] = ["嵌入桌面"]
 
         mysetting_dict['task_geometry'] = [(276, 60, 12, 12)]
         mysetting_dict['task_radius'] = [0]
@@ -412,16 +417,16 @@ class MainWindow(CustomWindow):
             icon=self.icon,
             hover_text=self.title,
             menu_options=[
-                ['退出', "icons/exit.ico", self.exit__, 1],  # 菜单项格式:["菜单项名称","菜单项图标路径或None",回调函数或者子菜单列表,id数字(随便写不要重复即可)]
+                ['退出', self.exe_dir_path + "\\icons\\exit.ico", self.exit__, 1],  # 菜单项格式:["菜单项名称","菜单项图标路径或None",回调函数或者子菜单列表,id数字(随便写不要重复即可)]
 
                 ["分隔符", None, None, 222],
-                ['恢复默认', "icons/recovery.ico", self.reset__, 16],
-                ['开源地址', "icons/github.ico", self.github__, 42],
-                ['主界面', "icons/home.ico", self.show__, 2],
+                ['恢复默认', self.exe_dir_path + "\\icons\\recovery.ico", self.reset__, 16],
+                ['开源地址', self.exe_dir_path + "\\icons\\github.ico", self.github__, 42],
+                ['主界面', self.exe_dir_path + "\\icons\\home.ico", self.show__, 2],
 
                 ["分隔符", None, None, 111],
-                ['删除全部', "icons/del.ico", self.delall__, 7],
-                ['新建日程', "icons/edit.ico", self.newtask__, 6]
+                ['删除全部', self.exe_dir_path + "\\icons\\del.ico", self.delall__, 7],
+                ['新建日程', self.exe_dir_path + "\\icons\\edit.ico", self.newtask__, 6]
             ],
             menu_style="iconic" if taskbar_icon else "normal",
             icon_x_pad=12
