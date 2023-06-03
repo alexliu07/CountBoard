@@ -374,6 +374,11 @@ class MainWindow(CustomWindow):
         mydb_dict.clear()
         mysetting_dict.clear()
 
+        #设定开机自启
+        if self.auto_run.get():
+            self.auto_run.set(0)
+            self.set_auto_run()
+
         mysetting_dict['tile_theme_name'] = ["Acrylic"]
         mysetting_dict['tile_geometry'] = [(300, 84, 20, 20)]
         mysetting_dict['tile_top'] = [1]
