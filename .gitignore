@@ -6,10 +6,9 @@ build
 .idea
 *.pyc
 pack
-data
 .venv
-logs
 pack32
 *.txt
 cache
 apps
+test

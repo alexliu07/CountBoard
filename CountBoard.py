@@ -10,11 +10,11 @@ import ctypes
 import functools
 import logging
 import os
-import platform
+import shutil
+import subprocess
 import sys
 import time
 import win32api
-import win32con
 from queue import Queue
 import webbrowser
 import traceback
@@ -32,14 +32,14 @@ from utils.updater import checkUpdate
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
-    def __init__(self, version, icon, logger, exe_dir_path, *args, **kwargs):
+    def __init__(self, version, icon, exe_dir_path, *args, **kwargs):
         self.root = tk.Tk()
 
         self.style = ttk.Style()
         super().__init__(*args, **kwargs)
 
         # 布局初始化
-        self.__init__2(version, icon, logger, exe_dir_path)
+        self.__init__2(version, icon, exe_dir_path)
 
         # 为了使各个窗体独立开来，让其互不干扰，通过队列实现窗体之间的通信。
         self.tile_queue = Queue()
@@ -63,13 +63,12 @@ class MainWindow(CustomWindow):
 
     '''-----------------------------------布局、基本设置-----------------------------------------------'''
 
-    def __init__2(self, version, icon, logger, exe_dir_path):
+    def __init__2(self, version, icon, exe_dir_path):
         """
         布局初始化(一个窗体基本的设置:比如设置主题，窗口布局,变量初始化(当前不赋值))
         """
         # 传参
         self.version = version
-        self.logger = logger
         self.exe_dir_path = exe_dir_path
         self.icon = icon
 
@@ -99,7 +98,25 @@ class MainWindow(CustomWindow):
         self.interval_notify_s = tk.IntVar()
         self.interval_notify_title = tk.StringVar()
         self.interval_notify_content = tk.StringVar()
+        self.auto_run_script_path = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\CountBoard.vbs'.format(os.environ.get('AppData'))
 
+        # 工作目录
+        self.work_dir = os.environ.get('AppData')+"\\CountBoard"
+        if not os.path.exists(self.work_dir):
+            os.mkdir(self.work_dir)
+            os.mkdir('{}\\data'.format(self.work_dir))
+            os.mkdir('{}\\logs'.format(self.work_dir))
+            # 数据迁移
+            if os.path.exists(self.exe_dir_path + '/data'):
+                settingFile = '{}\\data\\settings.sqlite'
+                dbFile = '{}\\data\\database.sqlite'
+                shutil.copy(settingFile.format(self.exe_dir_path),settingFile.format(self.work_dir))
+                shutil.copy(dbFile.format(self.exe_dir_path),dbFile.format(self.work_dir))
+                shutil.rmtree('{}\\data'.format(self.exe_dir_path))
+                shutil.rmtree('{}\\logs'.format(self.exe_dir_path))
+
+        # 日志记录器
+        self.logger = my_logs(self.work_dir)
         # 取消主窗体置顶
         self.root.wm_attributes('-topmost', 0)
         # 界面布局
@@ -127,9 +144,6 @@ class MainWindow(CustomWindow):
         self.scheduler.add_job(self.refresh_, 'cron', hour=0, minute=0)
         self.scheduler.start()
 
-        # 检测是否有data文件夹
-        if not os.path.exists("data"):
-            os.mkdir("data")
 
     def close_(self):
         """重写关闭按钮"""
@@ -137,6 +151,7 @@ class MainWindow(CustomWindow):
 
     def show_(self):
         """显示隐藏的窗体"""
+        self.checkAutoRun()
         self.root.deiconify()
 
     def refresh_(self):
@@ -256,18 +271,24 @@ class MainWindow(CustomWindow):
         self.t.ShowToast(title=self.regular_notify_title.get(), msg=self.regular_notify_content.get())
 
     '''-----------------------------------耗时操作线程-----------------------------------------------'''
+    def checkAutoRun(self):
+        '''通过检索文件确认是否开启自启动'''
+        if os.path.exists(self.auto_run_script_path):
+            self.auto_run.set(1)
+        else:
+            self.auto_run.set(0)
 
     def initialization(self):
         """执行耗时操作,例如从数据库读取数据(先布局—_init2__设变量，然后在此线程中动态赋值)"""
 
         # 判断是否第一次运行(执行恢复默认操作)
-        if not os.path.exists(self.exe_dir_path + "/data/settings.sqlite"):
+        if not os.path.exists(self.work_dir + "/data/settings.sqlite"):
             self.logger.info("第一次运行")
             self.reset()
 
         # 读取数据库
-        self.mydb_dict = SqliteDict(self.exe_dir_path + '/data/database.sqlite', autocommit=True)
-        self.mysetting_dict = SqliteDict(self.exe_dir_path + '/data/settings.sqlite', autocommit=True)
+        self.mydb_dict = SqliteDict(self.work_dir + '/data/database.sqlite', autocommit=True)
+        self.mysetting_dict = SqliteDict(self.work_dir + '/data/settings.sqlite', autocommit=True)
         self.logger.info([(x, i) for x, i in self.mysetting_dict.items()])
 
         # 其他变量
@@ -290,12 +311,8 @@ class MainWindow(CustomWindow):
         self.task_radius.set(self.mysetting_dict["task_radius"][0])
         self.tile_top.set(self.mysetting_dict["tile_top"][0])
         self.taskbar_icon.set(self.mysetting_dict["taskbar_icon"][0])
-        # 通过检索文件确认是否开启自启动
-        shortcutPath = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'.format(os.environ.get('AppData'))
-        if os.path.exists('{}CountBoard'.format(shortcutPath)):
-            self.auto_run.set(1)
-        else:
-            self.auto_run.set(0)
+
+        self.checkAutoRun()
         # 删除原有设定
         try:
             if self.mysetting_dict['auto_run'][0] == 1 or self.mysetting_dict['auto_run'][0] == 0:
@@ -349,8 +366,8 @@ class MainWindow(CustomWindow):
         self.main_window_queue.put("set_regular_notify")
     def reset(self):
         """恢复默认配置或者初始化配置"""
-        mydb_dict = SqliteDict(self.exe_dir_path + '/data/database.sqlite', autocommit=True)
-        mysetting_dict = SqliteDict(self.exe_dir_path + '/data/settings.sqlite', autocommit=True)
+        mydb_dict = SqliteDict(self.work_dir + '/data/database.sqlite', autocommit=True)
+        mysetting_dict = SqliteDict(self.work_dir + '/data/settings.sqlite', autocommit=True)
         mydb_dict.clear()
         mysetting_dict.clear()
 
@@ -383,7 +400,7 @@ class MainWindow(CustomWindow):
 
     def backend(self):
         """后台图标线程"""
-        with SqliteDict(self.exe_dir_path + '/data/settings.sqlite') as mydict:  # re-open the same DB
+        with SqliteDict(self.work_dir + '/data/settings.sqlite') as mydict:  # re-open the same DB
             try:
                 taskbar_icon = mydict["taskbar_icon"][0]
             except:
@@ -535,10 +552,8 @@ class MainWindow(CustomWindow):
         )
         widget_frame5.pack(fill=tk.X, pady=8)
 
-        #若系统符合要求则显示开机自启选项
-        if platform.release() == '10':
-            ttk.Checkbutton(widget_frame5, text='允许开机自启', variable=self.auto_run, bootstyle="square-toggle",
-                            command=self.set_auto_run).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
+        ttk.Checkbutton(widget_frame5, text='允许开机自启', variable=self.auto_run, bootstyle="square-toggle",
+                        command=self.set_auto_run).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         ttk.Checkbutton(widget_frame5, text='开启磁贴的置顶功能', variable=self.tile_top, bootstyle="square-toggle",
                         command=self.set_tile_top).pack(side=tk.TOP, fill=tk.X, expand=tk.YES, pady=5)
         ttk.Checkbutton(widget_frame5, text='开启磁贴的圆角功能', variable=self.task_radius, onvalue=25, offvalue=0,bootstyle="square-toggle",
@@ -663,16 +678,38 @@ class MainWindow(CustomWindow):
         self.tile_queue.put(("modify_offset", self.tile_auto_margin_length.get()))
 
 
+
     def set_auto_run(self):
         """是否开启软件自启"""
-        shortcutPath = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'.format(os.environ.get('AppData'))
-        mainPath = str(Path(self.exe_dir_path).joinpath("CountBoard.exe"))  # 要添加的exe路径
-
         if self.auto_run.get():
-            os.system('mklink "{}CountBoard" "{}"'.format(shortcutPath,mainPath))
+            # 创建启动脚本
+            callFile = '{}\\startup.vbs'.format(self.work_dir)
+            callContent = 'set ws=WScript.CreateObject("WScript.Shell")\nws.Run "{}\\CountBoard.exe",0'.format(self.exe_dir_path)
+            with open(callFile,'w+',encoding='utf-8') as f:
+                f.write(callContent)
+            copyFile = '{}\\EnableAutoRun.bat'.format(self.work_dir)
+            copyContent = '@echo off\ncopy "{}" "{}"\ndel "{}"'.format(callFile, self.auto_run_script_path,callFile)
+            with open(copyFile,'w+',encoding='utf-8') as f:
+                f.write(copyContent)
+            exeCopyFile = '{}\\EnableAutoRun.vbs'.format(self.work_dir)
+            exeCopyContent = 'Set ws = WScript.CreateObject("WScript.Shell")\nIf WScript.Arguments.Length = 0 Then\nSet ObjShell = CreateObject("Shell.Application")\nObjShell.ShellExecute "wscript.exe" , """" & WScript.ScriptFullName & """ RunAsAdministrator", , "runas", 1\nWScript.Quit\nEnd if\nws.Run "{}\\EnableAutoRun.bat",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{}")\nfile.DeleteFile("{}")'.format(self.work_dir,copyFile,exeCopyFile)
+            with open(exeCopyFile,'w+',encoding='utf-8') as f:
+                f.write(exeCopyContent)
+            # 运行脚本
+            subprocess.Popen('wscript.exe {}\\EnableAutoRun.vbs'.format(self.work_dir))
             print('开启软件自启动')
         else:
-            os.remove('{}CountBoard'.format(shortcutPath))
+            # 创建删除脚本
+            deleteFile = '{}\\DisableAutoRun.bat'.format(self.work_dir)
+            deleteContent = '@echo off\ndel "{}" /Q /F'.format(self.auto_run_script_path)
+            with open(deleteFile,'w+',encoding='utf-8') as f:
+                f.write(deleteContent)
+            exeDeleteFile = '{}\\DisableAutoRun.vbs'.format(self.work_dir)
+            exeDeleteContent = 'Set ws = WScript.CreateObject("WScript.Shell")\nIf WScript.Arguments.Length = 0 Then\nSet ObjShell = CreateObject("Shell.Application")\nObjShell.ShellExecute "wscript.exe" , """" & WScript.ScriptFullName & """ RunAsAdministrator", , "runas", 1\nWScript.Quit\nEnd if\nws.Run "{}\\DisableAutoRun.bat",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{}")\nfile.DeleteFile("{}")'.format(self.work_dir,deleteFile,exeDeleteFile)
+            with open(exeDeleteFile,'w+',encoding='utf-8') as f:
+                f.write(exeDeleteContent)
+            # 运行脚本
+            subprocess.Popen('wscript.exe {}\\DisableAutoRun.vbs'.format(self.work_dir))
             print('关闭软件自启动')
 
     def set_tile_auto_margin(self):
@@ -1228,14 +1265,11 @@ def my_logs(exe_dir_path):
 def main():
     # pathlib可以根据平台自动转换斜杠，不过返回的不是str，还需要转化
     exe_dir_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-
-    logger = my_logs(exe_dir_path)
-    logger.info(exe_dir_path)
+    print(exe_dir_path)
 
     # 获取屏幕信息
     screen_info = win32api.GetMonitorInfo(win32api.MonitorFromPoint((0, 0)))
-    logger.info(str(screen_info))
-
+    print(screen_info)
 
     try:
         MainWindow(
@@ -1244,13 +1278,13 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.5.2",
-            logger=logger,
+            version="1.5.3",
             exe_dir_path=exe_dir_path,
-            show=0,)
-    except:
-        logger.error(traceback.format_exc())
+            show=0
+        )
 
+    except:
+        print(traceback.format_exc())
 
 if __name__ == "__main__":
     utility.enable_high_dpi_awareness()
