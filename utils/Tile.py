@@ -221,7 +221,7 @@ class Tile(CustomWindow):
                         tile_queue=self.tile_queue,
                         value=value)
                     return 1
-            print("no!" + self.tag_name.get())
+            self.logger.info("no!" + self.tag_name.get())
             self.tag_name.set("")
 
         elif content == "DelTaskWindow":
@@ -384,10 +384,9 @@ class Tile(CustomWindow):
 
             try:
                 self.mysetting_dict["tile_geometry"] = [(self.width, self.height, x_adjust, y_adjust)]
-                print("写入数据库成功")
+                self.logger.info("写入数据库成功")
             except:
-                print("写入数据库失败")
-                print(traceback.format_exc())
+                self.logger.error("写入数据库失败："+traceback.format_exc())
 
             self.root.geometry(geo_str)
 
@@ -785,7 +784,7 @@ class AskResetWindow(CustomWindow):
         self.frame_bottom = Frame(self.root)
         self.frame_bottom.pack(side=BOTTOM, padx=20, expand=True, fill=X)
 
-        self.lable = ttk.Label(self.frame_top, text="是否要恢复默认（将会自动关闭软件）?")
+        self.lable = ttk.Label(self.frame_top, text="是否要恢复默认（将会自动重启软件）?")
         self.lable.pack(side=tk.TOP, padx=5, pady=2, expand=True, fill=X)
 
         self.cancel_button = ttk.Button(
@@ -808,35 +807,7 @@ class AskResetWindow(CustomWindow):
     def ok(self):
         self.main_window_queue.put("reset")
         self.root.destroy()
-        self.main_window_queue.put("exit")
-
-class PromptWindow(CustomWindow):
-    def __init__(self, main_window_queue, text, *args, **kwargs):
-        self.root = tk.Toplevel()
-        super().__init__(*args, **kwargs)
-
-        # 传递参数
-        self.main_window_queue = main_window_queue
-
-        # 布局
-        self.frame_top = Frame(self.root)
-        self.frame_top.pack(side=TOP, padx=20, pady=5, expand=True, fill=X)
-        self.frame_bottom = Frame(self.root)
-        self.frame_bottom.pack(side=BOTTOM, padx=20, expand=True, fill=X)
-
-        self.lable = ttk.Label(self.frame_top, text=text)
-        self.lable.pack(side=tk.TOP, padx=5, pady=2, expand=True, fill=X)
-
-        self.ok_button = ttk.Button(
-            master=self.frame_bottom,
-            text='确认',
-            bootstyle='outline',
-            command=self.ok, )
-        self.ok_button.pack(side=tk.RIGHT, fill=tk.X, expand=tk.YES, padx=3)
-
-    def ok(self):
-        self.root.destroy()
-        self.main_window_queue.put("exit")
+        self.main_window_queue.put("restart")
 
 # 处理滑动条小数
 class Limiter(ttk.Scale):

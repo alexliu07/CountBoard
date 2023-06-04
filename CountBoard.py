@@ -22,13 +22,12 @@ import traceback
 from apscheduler.schedulers.background import BackgroundScheduler
 from pywin10 import TaskBarIcon
 from sqlitedict import SqliteDict
-
-import utils.Resources
 from utils.Tile import *
 from utils.CustomWindow import CustomWindow
 import utils.ttkbootstrap as ttk
 from utils.ttkbootstrap.style import utility
 from utils.Updater import checkUpdate
+from utils.Resources import extract_icons
 
 
 class MainWindow(CustomWindow):
@@ -102,8 +101,8 @@ class MainWindow(CustomWindow):
         self.interval_notify_title = tk.StringVar()
         self.interval_notify_content = tk.StringVar()
         self.auto_run_script_path = '{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\CountBoard.vbs'.format(os.environ.get('AppData'))
-
-        # 数据迁移
+        self.elevate_script = 'If WScript.Arguments.Length = 0 Then\nSet ObjShell = CreateObject("Shell.Application")\nObjShell.ShellExecute "wscript.exe" , """" & WScript.ScriptFullName & """ RunAsAdministrator", , "runas", 1\nWScript.Quit\nEnd if'
+    # 数据迁移
         if os.path.exists(self.exe_dir_path + '\\data'):
             settingFile = '{}\\data\\settings.sqlite'
             dbFile = '{}\\data\\database.sqlite'
@@ -219,6 +218,9 @@ class MainWindow(CustomWindow):
 
         elif content == "exit":
             sys.exit(1)
+
+        elif content == 'restart':
+            self.restart_app()
 
         elif content == "show_":
             # 显示窗体
@@ -441,9 +443,16 @@ class MainWindow(CustomWindow):
         self.main_window_queue.put("show_")
 
     def exit__(self):
-        """退出"""
+        """托盘退出"""
         self.logger.info("后台退出")
         win32gui.DestroyWindow(self.t.hwnd)
+        self.exit_()
+
+    def exit_(self):
+        '''退出'''
+        if not self.update_exit:
+            self.update_exit = 1
+            self.update_thread.join()
         self.tile_queue.put("exit")
         self.main_window_queue.put("exit")
 
@@ -692,30 +701,22 @@ class MainWindow(CustomWindow):
             callContent = 'set ws=WScript.CreateObject("WScript.Shell")\nws.Run "{}\\CountBoard.exe",0'.format(self.exe_dir_path)
             with open(callFile,'w+',encoding='utf-8') as f:
                 f.write(callContent)
-            copyFile = '{}\\EnableAutoRun.bat'.format(self.work_dir)
-            copyContent = '@echo off\ncopy "{}" "{}"\ndel "{}"'.format(callFile, self.auto_run_script_path,callFile)
+            copyFile = '{}\\EnableAutoRun.vbs'.format(self.work_dir)
+            copyContent = 'Set ws = WScript.CreateObject("WScript.Shell")\n{0}\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.CopyFile "{1}","{2}",True\nfile.DeleteFile("{1}")\nfile.DeleteFile("{3}")'.format(self.elevate_script,callFile,self.auto_run_script_path,copyFile)
             with open(copyFile,'w+',encoding='utf-8') as f:
                 f.write(copyContent)
-            exeCopyFile = '{}\\EnableAutoRun.vbs'.format(self.work_dir)
-            exeCopyContent = 'Set ws = WScript.CreateObject("WScript.Shell")\nIf WScript.Arguments.Length = 0 Then\nSet ObjShell = CreateObject("Shell.Application")\nObjShell.ShellExecute "wscript.exe" , """" & WScript.ScriptFullName & """ RunAsAdministrator", , "runas", 1\nWScript.Quit\nEnd if\nws.Run "{}\\EnableAutoRun.bat",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{}")\nfile.DeleteFile("{}")'.format(self.work_dir,copyFile,exeCopyFile)
-            with open(exeCopyFile,'w+',encoding='utf-8') as f:
-                f.write(exeCopyContent)
             # 运行脚本
-            subprocess.Popen('wscript.exe {}\\EnableAutoRun.vbs'.format(self.work_dir))
-            print('开启软件自启动')
+            subprocess.Popen('wscript.exe {}'.format(copyFile))
+            self.logger.info('开启软件自启动')
         else:
             # 创建删除脚本
-            deleteFile = '{}\\DisableAutoRun.bat'.format(self.work_dir)
-            deleteContent = '@echo off\ndel "{}" /Q /F'.format(self.auto_run_script_path)
+            deleteFile = '{}\\DisableAutoRun.vbs'.format(self.work_dir)
+            deleteContent = 'Set ws = WScript.CreateObject("WScript.Shell")\n{}\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{}")\nfile.DeleteFile("{}")'.format(self.elevate_script,self.auto_run_script_path,deleteFile)
             with open(deleteFile,'w+',encoding='utf-8') as f:
                 f.write(deleteContent)
-            exeDeleteFile = '{}\\DisableAutoRun.vbs'.format(self.work_dir)
-            exeDeleteContent = 'Set ws = WScript.CreateObject("WScript.Shell")\nIf WScript.Arguments.Length = 0 Then\nSet ObjShell = CreateObject("Shell.Application")\nObjShell.ShellExecute "wscript.exe" , """" & WScript.ScriptFullName & """ RunAsAdministrator", , "runas", 1\nWScript.Quit\nEnd if\nws.Run "{}\\DisableAutoRun.bat",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{}")\nfile.DeleteFile("{}")'.format(self.work_dir,deleteFile,exeDeleteFile)
-            with open(exeDeleteFile,'w+',encoding='utf-8') as f:
-                f.write(exeDeleteContent)
             # 运行脚本
-            subprocess.Popen('wscript.exe {}\\DisableAutoRun.vbs'.format(self.work_dir))
-            print('关闭软件自启动')
+            subprocess.Popen('wscript.exe {}'.format(deleteFile))
+            self.logger.info('关闭软件自启动')
 
     def set_tile_auto_margin(self):
         """是否开启自动贴边"""
@@ -853,9 +854,9 @@ class MainWindow(CustomWindow):
         ).pack(fill=tk.X, pady=(10, 15))
         self.retry_btn = ttk.Button(
             master=self.update_error,
-            text='重试更新',
+            text='重试',
             bootstyle='outline',
-            command=self.newtask__,width=10)
+            command=self.start_update,width=10)
         self.retry_btn.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
         # 有更新提示
         self.need_update = ttk.Frame(master=widget_frame8)
@@ -871,14 +872,42 @@ class MainWindow(CustomWindow):
             master=self.need_update,
             orient=tk.HORIZONTAL
         ).pack(fill=tk.X, pady=(10, 15))
-        self.update_process = ttk.Label(master=self.need_update,font=('Microsoft Yahei',10,'bold'))
-        self.update_process.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
-        self.update_thread = Thread(target=self.check_update)
-        #self.update_thread.start()
+        self.updating_text = '正在下载更新...{}%'
+        self.updating_progress = ttk.Label(master=self.need_update,font=('Microsoft Yahei',10,'bold'))
+        self.updating_progress.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
+        # 更新下载完毕
+        self.update_complete = ttk.Frame(master=widget_frame8)
+        #self.update_complete.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.update_complete,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        self.update_complete_msg = ttk.Label(master=self.update_complete,text='更新下载完成，重启以完成更新')
+        self.update_complete_msg.pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.update_complete,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        self.restart_btn = ttk.Button(
+            master=self.update_complete,
+            text='重启并完成更新',
+            bootstyle='outline',
+            command=self.restart_app,width=10)
+        self.restart_btn.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
+        self.start_update()
         return tab
+    def restart_app(self):
+        '''重启程序'''
+        os.execl(self.exe_dir_path + '\\CountBoard.exe','CountBoard.exe')
+
     def check_update(self):
         """检测更新"""
         checkUpdate(self)
+
+    def start_update(self):
+        self.update_exit = 0
+        self.update_thread = Thread(target=self.check_update)
+        self.update_thread.start()
 
     '''-----------------------------------提醒页面-----------------------------------------------'''
 
@@ -1287,7 +1316,7 @@ def main():
     # 资源解压
     if not os.path.exists(work_dir + '\\icons'):
         os.mkdir(work_dir + '\\icons')
-        utils.Resources.extract_icons(work_dir)
+        extract_icons(work_dir)
     if os.path.exists(exe_dir_path + '\\icons'):
         shutil.rmtree(exe_dir_path + '\\icons')
 
@@ -1302,7 +1331,7 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.5.4",
+            version="1.6.0",
             exe_dir_path=exe_dir_path,
             work_dir=work_dir,
             logger=logger,
