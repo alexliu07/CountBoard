@@ -706,6 +706,7 @@ class MainWindow(CustomWindow):
             with open(copyFile,'w+',encoding='utf-8') as f:
                 f.write(copyContent)
             # 运行脚本
+
             subprocess.Popen('wscript.exe {}'.format(copyFile))
             self.logger.info('开启软件自启动')
         else:
@@ -868,15 +869,18 @@ class MainWindow(CustomWindow):
         self.update_msg = '发现新版本：Countboard V{}，更新内容：\n\n{}'
         self.update_text = ttk.Label(master=self.need_update)
         self.update_text.pack(side=tk.TOP, fill=tk.X)
+        # 正在更新提示
+        self.updating = ttk.Frame(master=self.need_update)
+        #self.updating.pack(side=tk.TOP, fill=tk.X)
         ttk.Separator(
-            master=self.need_update,
+            master=self.updating,
             orient=tk.HORIZONTAL
         ).pack(fill=tk.X, pady=(10, 15))
         self.updating_text = '正在下载更新...{}%'
-        self.updating_progress = ttk.Label(master=self.need_update,font=('Microsoft Yahei',10,'bold'))
+        self.updating_progress = ttk.Label(master=self.updating,font=('Microsoft Yahei',10,'bold'))
         self.updating_progress.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
         # 更新下载完毕
-        self.update_complete = ttk.Frame(master=widget_frame8)
+        self.update_complete = ttk.Frame(master=self.need_update)
         #self.update_complete.pack(side=tk.TOP, fill=tk.X)
         ttk.Separator(
             master=self.update_complete,
