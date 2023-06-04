@@ -114,8 +114,6 @@ def checkUpdate(window):
     # 获取Github镜像银接
     if getGithubURL() == 1:
         return
-    # changeState([0,1,0,0,0],None)
-    # changeState([0,0,0,1,0],['123','aaa'])
     # 检测新版本
     try:
         info = requests.get('https://api.github.com/repos/alexliu07/CountBoard/releases').text
