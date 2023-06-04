@@ -839,6 +839,16 @@ class MainWindow(CustomWindow):
             master=self.up_to_date,
             text='CountBoard 已更新到最新版本'
         ).pack(side=tk.TOP, fill=tk.X)
+        ttk.Separator(
+            master=self.up_to_date,
+            orient=tk.HORIZONTAL
+        ).pack(fill=tk.X, pady=(10, 15))
+        self.update_btn = ttk.Button(
+            master=self.up_to_date,
+            text='检测更新',
+            bootstyle='outline',
+            command=self.start_update,width=10)
+        self.update_btn.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
         # 更新错误提示
         self.update_error = ttk.Frame(master=widget_frame8)
         #self.update_error.pack(side=tk.TOP, fill=tk.X)
