@@ -29,7 +29,7 @@ from utils.ttkbootstrap.style import utility
 from utils.Updater import checkUpdate
 from utils.Resources import extract_icons
 
-
+enableUpdate = True
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
@@ -450,9 +450,6 @@ class MainWindow(CustomWindow):
 
     def exit_(self):
         '''退出'''
-        if not self.update_exit:
-            self.update_exit = 1
-            self.update_thread.join()
         self.tile_queue.put("exit")
         self.main_window_queue.put("exit")
 
@@ -908,7 +905,8 @@ class MainWindow(CustomWindow):
             bootstyle='outline',
             command=self.restart_app,width=10)
         self.restart_btn.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=(0, 5))
-        self.start_update()
+        if enableUpdate:
+            self.start_update()
         return tab
     def restart_app(self):
         '''重启程序'''
@@ -919,8 +917,8 @@ class MainWindow(CustomWindow):
         checkUpdate(self)
 
     def start_update(self):
-        self.update_exit = 0
         self.update_thread = Thread(target=self.check_update)
+        self.update_thread.daemon = True
         self.update_thread.start()
 
     '''-----------------------------------提醒页面-----------------------------------------------'''
@@ -1345,7 +1343,7 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.6.0",
+            version="1.6.1",
             exe_dir_path=exe_dir_path,
             work_dir=work_dir,
             logger=logger,

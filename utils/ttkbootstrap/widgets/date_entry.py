@@ -12,6 +12,7 @@ class DateEntry(ttk.Frame):
         firstweekday=6,
         startdate=None,
         bootstyle='',
+        textvariable='',
         **kwargs
     ):
         """A date entry widget combines the `Combobox` and a `Button` 
@@ -74,6 +75,8 @@ class DateEntry(ttk.Frame):
         entry_kwargs = {'bootstyle': self._bootstyle}
         if 'width' in kwargs:
             entry_kwargs['width'] = kwargs.pop('width')
+        if textvariable != '':
+            entry_kwargs['textvariable'] = textvariable
         
         self.entry = ttk.Entry(self, **entry_kwargs)
         self.entry.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES)

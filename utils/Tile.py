@@ -40,12 +40,17 @@ def calc_dates(value):
     else:
         startday = startdate + datetime.timedelta(days=1)
     day = (enddate - startday).days
-    if day > 0:
-        holidays = len(chinese_calendar.get_holidays(startday,enddate-datetime.timedelta(days=1)))
-        workdays = len(chinese_calendar.get_workdays(startday,enddate-datetime.timedelta(days=1)))
+    min_year, max_year = min(chinese_calendar.constants.holidays.keys()).year, max(chinese_calendar.constants.holidays.keys()).year
+    if min_year <= enddate.year <= max_year:
+        if day > 0:
+            holidays = len(chinese_calendar.get_holidays(startday,enddate-datetime.timedelta(days=1)))
+            workdays = len(chinese_calendar.get_workdays(startday,enddate-datetime.timedelta(days=1)))
+        else:
+            holidays = -len(chinese_calendar.get_holidays(enddate+datetime.timedelta(days=1),startdate))
+            workdays = -len(chinese_calendar.get_workdays(enddate+datetime.timedelta(days=1),startdate))
     else:
-        holidays = -len(chinese_calendar.get_holidays(enddate+datetime.timedelta(days=1),startdate))
-        workdays = -len(chinese_calendar.get_workdays(enddate+datetime.timedelta(days=1),startdate))
+        holidays = 0
+        workdays = 0
     if value[5] and value[6]:
         pass
     else:
@@ -642,8 +647,10 @@ class NewTaskWindow(CustomWindow):
             master=timer_frame,
             text='选择时间  '
         ).pack(side=tk.LEFT, fill=tk.X)
-        self.date_entry = DateEntry(timer_frame)
+        self.date = tk.StringVar()
+        self.date_entry = DateEntry(timer_frame,textvariable=self.date)
         self.date_entry.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES, padx=3)
+        self.date.trace("w",self.date_changed)
 
         # 倒计时日期类型选择
         choose_frame = ttk.Frame(self.main_frame)
@@ -652,11 +659,13 @@ class NewTaskWindow(CustomWindow):
         #工作日
         self.check_workday = IntVar()
         self.check_workday.set(1)
-        ttk.Checkbutton(choose_frame, text="工作日", variable=self.check_workday).pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
+        self.sel_workday = ttk.Checkbutton(choose_frame, text="工作日", variable=self.check_workday)
+        self.sel_workday.pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
         #周末/节假日
         self.check_holiday = IntVar()
         self.check_holiday.set(1)
-        ttk.Checkbutton(choose_frame, text="周末/节假日",variable=self.check_holiday).pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
+        self.sel_holiday = ttk.Checkbutton(choose_frame, text="周末/节假日",variable=self.check_holiday)
+        self.sel_holiday.pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
 
         # 第三行框架
         ok_frame = ttk.Frame(self.main_frame)
@@ -690,12 +699,30 @@ class NewTaskWindow(CustomWindow):
                 self.check_workday.set(int(self.value[5]))
                 self.check_holiday.set(int(self.value[6]))
 
+                self.date_changed()
+
                 self.del_task_button = ttk.Button(
                     master=ok_frame,
                     text='删除',
                     style='danger.Outline.TButton',
                     command=self.del_task,
                 ).pack(side=tk.LEFT, padx=3)
+
+    def date_changed(self,*args):
+        if self.date.get():
+            print("变量以改变：",self.date.get())
+            new_date = datetime.datetime.strptime(self.date.get(), '%Y-%m-%d').date()
+            min_year, max_year = min(chinese_calendar.constants.holidays.keys()).year, max(chinese_calendar.constants.holidays.keys()).year
+            if min_year <= new_date.year <= max_year:
+                self.sel_workday.config(state=tk.NORMAL)
+                self.sel_holiday.config(state=tk.NORMAL)
+                self.check_workday.set(1)
+                self.check_holiday.set(1)
+            else:
+                self.sel_workday.config(state=tk.DISABLED)
+                self.sel_holiday.config(state=tk.DISABLED)
+                self.check_workday.set(1)
+                self.check_holiday.set(1)
 
 
     def del_task(self):

@@ -1,5 +1,6 @@
 import os
 import subprocess
+import traceback
 
 import requests
 import tkinter as tk
@@ -22,14 +23,15 @@ def getGithubURL():
     :return: status
     '''
     global githubURL
+    ips = None
     try:
         ips = eval(requests.get('https://raw.hellogithub.com/hosts.json').text)
         for i in ips:
             if i[1] == 'github.com':
                 githubURL = i[0]
         return 0
-    except Exception as e:
-        error(e)
+    except Exception:
+        error(f'{traceback.format_exc()}\n{ips}')
         return 1
 
 def download(url,path):
@@ -44,8 +46,6 @@ def download(url,path):
         mainWindow.logger.info('下载大小：'+str(total_size))
         content_size = 0
         for content in r.iter_content(chunk_size=1024):
-            if mainWindow.update_exit:
-                return 1
             file.write(content)
             # 统计已下载大小
             content_size += len(content)
@@ -115,13 +115,14 @@ def checkUpdate(window):
     if getGithubURL() == 1:
         return
     # 检测新版本
+    info = None
     try:
         info = requests.get('https://api.github.com/repos/alexliu07/CountBoard/releases').text
         info = info.replace('false','False').replace('true','True').replace('null','None')
         info = eval(info)
         latest_version_detail = info[0]
-    except Exception as e:
-        error(e)
+    except Exception:
+        error(f'{traceback.format_exc()}\n{info}')
         return
     # 获取最新版本号
     latest_version = latest_version_detail['tag_name']
@@ -145,7 +146,6 @@ def checkUpdate(window):
                     mainWindow.logger.info('执行更新')
                     # 执行更新
                     update()
-                    mainWindow.update_exit = 1
                     mainWindow.exit_()
                     return
         if download(downloadURL,file_path):
