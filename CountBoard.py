@@ -29,7 +29,7 @@ from utils.ttkbootstrap.style import utility
 from utils.Updater import checkUpdate
 from utils.Resources import extract_icons
 
-enableUpdate = True
+enableUpdate = False
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
@@ -704,7 +704,7 @@ class MainWindow(CustomWindow):
                 f.write(copyContent)
             # 运行脚本
 
-            subprocess.Popen('wscript.exe {}'.format(copyFile))
+            subprocess.Popen('wscript.exe "{}"'.format(copyFile))
             self.logger.info('开启软件自启动')
         else:
             # 创建删除脚本
@@ -713,7 +713,7 @@ class MainWindow(CustomWindow):
             with open(deleteFile,'w+',encoding='utf-8') as f:
                 f.write(deleteContent)
             # 运行脚本
-            subprocess.Popen('wscript.exe {}'.format(deleteFile))
+            subprocess.Popen('wscript.exe "{}"'.format(deleteFile))
             self.logger.info('关闭软件自启动')
 
     def set_tile_auto_margin(self):

@@ -100,7 +100,7 @@ def update():
     updateContent = 'Set ws = createobject("wscript.shell")\n{0}\nws.run "powershell.exe Set-ExecutionPolicy RemoteSigned",0,True\nws.run "powershell.exe {1}",0,True\nws.run "taskkill /t /f /im CountBoard.exe",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{2}")\nfile.CopyFile "{3}","{2}",True\nws.run "{2}",0\nfile.DeleteFile("{3}")\nfile.DeleteFile("{4}")\nfile.DeleteFile("{1}")\nfile.DeleteFile("{5}")'.format(mainWindow.elevate_script,toastScript,mainWindow.exe_dir_path + '\\CountBoard.exe',mainWindow.work_dir + '\\Update.exe',mainWindow.work_dir + '\\.UpdateDownloaded',updateScript)
     with open(updateScript,'w+',encoding='utf-8') as f:
         f.write(updateContent)
-    subprocess.Popen('wscript.exe {}'.format(updateScript))
+    subprocess.Popen('wscript.exe "{}"'.format(updateScript))
 
 def checkUpdate(window):
     '''
