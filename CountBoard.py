@@ -29,7 +29,7 @@ from utils.ttkbootstrap.style import utility
 from utils.Updater import checkUpdate
 from utils.Resources import extract_icons
 
-enableUpdate = False
+enableUpdate = not os.path.exists(".updDisable")
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
