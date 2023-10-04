@@ -25,7 +25,7 @@ def getGithubURL():
     global githubURL
     ips = None
     try:
-        ips = eval(requests.get('https://raw.hellogithub.com/hosts.json').text)
+        ips = eval(requests.get('https://raw.hellogithub.com/hosts.json',verify=False).text)
         for i in ips:
             if i[1] == 'github.com':
                 githubURL = i[0]
@@ -117,7 +117,7 @@ def checkUpdate(window):
     # 检测新版本
     info = None
     try:
-        info = requests.get('https://api.github.com/repos/alexliu07/CountBoard/releases').text
+        info = requests.get('https://api.github.com/repos/alexliu07/CountBoard/releases',verify=False).text
         info = info.replace('false','False').replace('true','True').replace('null','None')
         info = eval(info)
         latest_version_detail = info[0]
