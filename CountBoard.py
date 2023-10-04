@@ -1343,7 +1343,7 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.6.1",
+            version="1.6.2",
             exe_dir_path=exe_dir_path,
             work_dir=work_dir,
             logger=logger,
