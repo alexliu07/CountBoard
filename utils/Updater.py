@@ -119,7 +119,7 @@ def update():
     toastContent = 'Add-Type -AssemblyName System.Windows.Forms\n$global:balloon = New-Object System.Windows.Forms.NotifyIcon\n$balloon.Icon = "{}"\n$balloon.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info\n$balloon.BalloonTipText = "这可能需要一些时间，请稍候..."\n$balloon.BalloonTipTitle = "CountBoard 正在进行更新"\n$balloon.Visible = $true\n$balloon.ShowBalloonTip(10)'.format(mainWindow.icon)
     with open(toastScript,'w+',encoding='gbk') as f:
         f.write(toastContent)
-    indexA = toastScript.find('\\')
+    indexA = toastScript.find('\\')+1
     indexB = len(toastScript)-''.join(reversed(toastScript)).find('\\')
     toastScriptPath = list(toastScript)
     toastScriptPath.insert(indexA,"'")

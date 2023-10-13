@@ -29,7 +29,11 @@ from utils.ttkbootstrap.style import utility
 from utils.Updater import checkUpdate
 from utils.Resources import extract_icons
 
-enableUpdate = not os.path.exists(".updDisable")
+enableUpdate = True
+if os.path.exists("countBoard.updDisable"):
+    isupdate = open('countBoard.updDisable','r',encoding='utf-8')
+    if isupdate.read() == '1':
+        enableUpdate = False
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
