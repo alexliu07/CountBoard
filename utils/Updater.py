@@ -1,9 +1,11 @@
+import hashlib
 import os
 import subprocess
 import traceback
 
 import requests
 import tkinter as tk
+from tkinter import messagebox
 
 githubURL = ''
 target_size = 0
@@ -17,6 +19,30 @@ def error(e):
     :return: void
     '''
     changeState([0,0,1,0,0,0],e)
+
+def md5sum(fname):
+    '''
+    计算文件MD5值
+    :param fname: 文件路径
+    :return: String：该文件的MD5值
+    '''
+    if not os.path.isfile(fname):
+        return False
+    try:
+        f = open(fname, 'rb')
+    except:
+        return False
+    m = hashlib.md5()
+    # 大文件处理
+    while True:
+        d = f.read(8096)
+        if not d:
+            break
+        m.update(d)
+    ret = m.hexdigest()
+    f.close()
+    return ret
+
 def getGithubURL():
     '''
     获取Github镜像链接
@@ -40,9 +66,6 @@ def download(url,path):
     # 请求下载地址，以流式的。打开要下载的文件位置。
     with requests.get(url, stream=True, verify=False) as r, open(path, 'wb') as file:
         total_size = int(r.headers['content-length'])
-        if total_size != target_size:
-            error('文件大小不匹配')
-            return 1
         mainWindow.logger.info('下载大小：'+str(total_size))
         content_size = 0
         for content in r.iter_content(chunk_size=1024):
@@ -96,10 +119,17 @@ def update():
     toastContent = 'Add-Type -AssemblyName System.Windows.Forms\n$global:balloon = New-Object System.Windows.Forms.NotifyIcon\n$balloon.Icon = "{}"\n$balloon.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info\n$balloon.BalloonTipText = "这可能需要一些时间，请稍候..."\n$balloon.BalloonTipTitle = "CountBoard 正在进行更新"\n$balloon.Visible = $true\n$balloon.ShowBalloonTip(10)'.format(mainWindow.icon)
     with open(toastScript,'w+',encoding='gbk') as f:
         f.write(toastContent)
+    indexA = toastScript.find('\\')
+    indexB = len(toastScript)-''.join(reversed(toastScript)).find('\\')
+    toastScriptPath = list(toastScript)
+    toastScriptPath.insert(indexA,"'")
+    toastScriptPath.insert(indexB,"'")
+    toastScriptPath = ''.join(toastScriptPath)
     updateScript = '{}\\Update.vbs'.format(mainWindow.work_dir)
-    updateContent = 'Set ws = createobject("wscript.shell")\n{0}\nws.run "powershell.exe Set-ExecutionPolicy RemoteSigned",0,True\nws.run "powershell.exe {1}",0,True\nws.run "taskkill /t /f /im CountBoard.exe",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{2}")\nfile.CopyFile "{3}","{2}",True\nws.run "{2}",0\nfile.DeleteFile("{3}")\nfile.DeleteFile("{4}")\nfile.DeleteFile("{1}")\nfile.DeleteFile("{5}")'.format(mainWindow.elevate_script,toastScript,mainWindow.exe_dir_path + '\\CountBoard.exe',mainWindow.work_dir + '\\Update.exe',mainWindow.work_dir + '\\.UpdateDownloaded',updateScript)
+    updateContent = 'Set ws = createobject("wscript.shell")\n{0}\nws.run "powershell.exe Set-ExecutionPolicy RemoteSigned",0,True\nws.run "powershell.exe {1}",0,True\nws.run "taskkill /t /f /im CountBoard.exe",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{2}")\nfile.CopyFile "{3}","{2}",True\nws.run "{2}",0\nfile.DeleteFile("{3}")\nfile.DeleteFile("{4}")\nfile.DeleteFile("{1}")\nfile.DeleteFile("{5}")'.format(mainWindow.elevate_script,toastScriptPath,mainWindow.exe_dir_path + '\\CountBoard.exe',mainWindow.work_dir + '\\Update.exe',mainWindow.work_dir + '\\.UpdateDownloaded',updateScript)
     with open(updateScript,'w+',encoding='utf-8') as f:
         f.write(updateContent)
+    messagebox.showinfo('CountBoard 更新','CountBoard 即将进行更新，将会自动退出程序并请求管理员权限')
     subprocess.Popen('wscript.exe "{}"'.format(updateScript))
 
 def checkUpdate(window):
@@ -108,7 +138,7 @@ def checkUpdate(window):
     :param window:主窗口
     :return:void
     '''
-    global mainWindow,target_size
+    global mainWindow
     mainWindow = window
     changeState([1,0,0,0,0,0],None)
     # 获取Github镜像银接
@@ -117,30 +147,27 @@ def checkUpdate(window):
     # 检测新版本
     info = None
     try:
-        info = requests.get('https://api.github.com/repos/alexliu07/CountBoard/releases',verify=False).text
-        info = info.replace('false','False').replace('true','True').replace('null','None')
-        info = eval(info)
-        latest_version_detail = info[0]
+        info = eval(requests.get("https://{}/alexliu07/CountBoard/raw/main/version.json".format(githubURL),verify=False).text)
     except Exception:
         error(f'{traceback.format_exc()}\n{info}')
         return
     # 获取最新版本号
-    latest_version = latest_version_detail['tag_name']
+    latest_version = info['version']
     if latest_version == mainWindow.version:
         # 最新版
         mainWindow.logger.info('当前已是最新版本')
         changeState([0,1,0,0,0,0],None)
         return
     else:
-        changeState([0,0,0,1,1,0],[latest_version,latest_version_detail['body'],'0'])
+        changeState([0,0,0,1,1,0],[latest_version,info['content'],'0'])
         # 下载最新版本
-        downloadURL = latest_version_detail['assets'][0]['browser_download_url'].replace('www.github.com',githubURL).replace('github.com',githubURL)
-        target_size = latest_version_detail['assets'][0]['size']
+        downloadURL = info['link']
+        target_md5 = info['md5']
         file_path = mainWindow.work_dir + '\\Update.exe'
         mark_path = mainWindow.work_dir + '\\.UpdateDownloaded'
-        mainWindow.logger.info('目标大小：'+str(target_size))
-        # 验证本地是否存在文件
-        if os.path.exists(file_path) and os.path.exists(mark_path) and os.path.getsize(file_path) == target_size:
+        mainWindow.logger.info('目标MD5：'+str(target_md5))
+        # 验证本地是否存在文件以及是否匹配
+        if os.path.exists(file_path) and os.path.exists(mark_path) and md5sum(file_path) == target_md5:
             with open(mark_path,'r',encoding='utf-8') as f:
                 if f.read() == latest_version:
                     mainWindow.logger.info('执行更新')
@@ -151,11 +178,11 @@ def checkUpdate(window):
         if download(downloadURL,file_path):
             return
         # 验证文件
-        file_size = os.path.getsize(file_path)
-        mainWindow.logger.info('文件大小：'+str(file_size))
-        if file_size != target_size:
-            error('文件大小不匹配')
+        file_md5 = md5sum(file_path)
+        mainWindow.logger.info('文件MD5：'+str(file_md5))
+        if file_md5 != target_md5:
+            error('文件MD5不匹配')
             return
         with open(mainWindow.work_dir + '\\.UpdateDownloaded','w+',encoding='utf-8') as f:
             f.write(latest_version)
-        changeState([0,0,0,1,0,1],[latest_version,latest_version_detail['body']])
+        changeState([0,0,0,1,0,1],[latest_version,info['content']])
