@@ -12,4 +12,4 @@ pack32
 cache
 apps
 test
-.updDisable
+*.updDisable
