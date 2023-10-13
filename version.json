@@ -1,1 +1,1 @@
-{"version": "1.6.1","link": "https://gitee.com/AlexLiu2007/CountBoard-release/releases/download/1.6.1/CountBoard.exe","content": "优化了自动更新程序\n[严重] 修复了当日程日期设为无节假日信息的日期时所有日程均无法显示的问题","md5": "21ab1fb34644b69d83d62a56f2f91733"}
+{"version": "1.6.2","link": "https://gitee.com/AlexLiu2007/CountBoard-release/releases/download/1.6.2/CountBoard.exe","content": "修复了当用户文件夹名中有空格时VBS和PowerShell脚本无法运行的问题\n修复了当开启加速器时SSL证书验证失败的问题\n改进了自动更新程序，可以从非Github上下载新版本程序\n新增了执行更新时的提示","md5": "0db7f54208695be634c70e72bb7ae665"}
