@@ -430,7 +430,7 @@ class Tasks:
 
     def __get_int_day(self, value):
         """按照时间排序(返回第三个值,时间值)"""
-        return calc_dates(value)
+        return int(calc_dates(value))
 
     def __round_rectangle(self, x1, y1, x2, y2, radius=25, **kwargs):
         """画长方形"""
