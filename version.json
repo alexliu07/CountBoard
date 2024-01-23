@@ -1,1 +1,1 @@
-{"version": "1.6.3","link": "https://gitee.com/AlexLiu2007/CountBoard-release/releases/download/1.6.3/CountBoard.exe","content": "修复了天数排序不正常的问题\n支持了2024年的节假日和工作日","md5": "b0fc6e0559834ddf2e8170840ddb5130"}
+{"version": "1.7.0","link": "https://gitee.com/AlexLiu2007/CountBoard-release/releases/download/1.7.0/CountBoard.exe","content": "新增了修改日程文本及背景颜色的功能(可能会受透明效果的影响)","md5": "b0fc6e0559834ddf2e8170840ddb5130"}
