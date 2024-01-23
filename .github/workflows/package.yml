@@ -38,9 +38,9 @@ jobs:
         pip install pyinstaller chinesecalendar APScheduler Pillow pywin10 pywin32 requests sqlitedict
     - name: Download And Extract UPX
       run: |
-        Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip" -OutFile .\UPX.zip
+        Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v4.2.2/upx-4.2.2-win64.zip" -OutFile .\UPX.zip
         Expand-Archive .\UPX.zip -DestinationPath .
-        ren .\upx-4.0.2-win64 UPX
+        ren .\upx-4.2.2-win64 UPX
     - name: Package App
       run: |
         mkdir cache
