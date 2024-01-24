@@ -2,8 +2,7 @@ CountBoard 是一个基于Tkinter开源的桌面日程倒计时应用。
 ***
 **Forked By alexliu07**
 ***
-## 基本功能 
-
+## 基本功能
 
 * 磁贴主题
    * Acrylic：亚克力效果。    
@@ -21,7 +20,10 @@ CountBoard 是一个基于Tkinter开源的桌面日程倒计时应用。
    * 紧迫模式：24小时以内算做零天。（已过期的事件无普通、紧迫模式之分）
 * 磁贴模式
    * 嵌入桌面：绑定到桌面。    
-   * 独立窗体：独立的窗体，可以设置置顶等。      
+   * 独立窗体：独立的窗体，可以设置置顶等。 
+
+## 如何禁用自动更新
+在程序运行目录下创建`countBoard.updDisable`文件，并将其内容填写为`1`(仅限1.6.2及以上版本)
    
 ## 预览图
 
@@ -45,11 +47,12 @@ CountBoard 是一个基于Tkinter开源的桌面日程倒计时应用。
 ## 其他说明
 * 美化包: [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap)
 * 托盘图标: [pywin10](https://github.com/Gaoyongxian666/pywin10)
-* 数据存储: [sqlitedict](https://github.com/Gaoyongxian666/pywin10)
+* 数据存储: [sqlitedict](https://github.com/piskvorky/sqlitedict)
 
 ## 更新日志
 * V1.7.1<br>2024-01-24<br>
   * 修复了自动更新时报错的问题
+  * 修复了更新时错误信息过长导致重试按钮无法显示的问题
 
 * V1.7.0<br>2024-01-23<br>
   * 新增了修改日程文本及背景颜色的功能(可能会受透明效果的影响)
@@ -111,6 +114,5 @@ CountBoard 是一个基于Tkinter开源的桌面日程倒计时应用。
    * 将日期显示的字体更改为微软雅黑
 
 ## 如何打包
-1. 安装`Python`
-2. 导入/分支本仓库
-3. 在Actions里面运行Package App
+1. 导入/分支本仓库
+2. 在Actions里面运行Package App

@@ -93,7 +93,10 @@ def changeState(mode,msg):
     else:
         mainWindow.up_to_date.pack_forget()
     if mode[2]:
-        mainWindow.error_text['text'] = mainWindow.error_msg.format(msg)
+        mainWindow.error_text.configure(state=tk.NORMAL)
+        mainWindow.error_text.delete(1.0,tk.END)
+        mainWindow.error_text.insert(tk.END,msg)
+        mainWindow.error_text.configure(state=tk.DISABLED)
         mainWindow.update_error.pack(side=tk.TOP, fill=tk.X)
     else:
         mainWindow.update_error.pack_forget()

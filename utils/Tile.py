@@ -193,7 +193,7 @@ class Tile(CustomWindow):
 
         elif content == "NewTaskWindow":
             # 打开新建日程
-            NewTaskWindow(title="新建日程", height=230, tile_queue=self.tile_queue)
+            NewTaskWindow(title="新建日程", height=250, tile_queue=self.tile_queue)
 
         elif content == "exit":
             self.exit()
@@ -223,7 +223,7 @@ class Tile(CustomWindow):
                 if value[3] == self.tag_name.get():
                     NewTaskWindow(
                         title="修改日程",
-                        height=230,
+                        height=250,
                         tile_queue=self.tile_queue,
                         value=value)
                     return 1
@@ -525,7 +525,7 @@ class Tasks:
             if value[4] == task_tag_name:
                 NewTaskWindow(
                     title="修改日程",
-                    height=230,
+                    height=250,
                     tile_queue=self.tile_queue,
                     value=value)
                 return 1

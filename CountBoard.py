@@ -788,7 +788,7 @@ class MainWindow(CustomWindow):
 
         ttk.Label(
             master=widget_frame4,
-            text='更新时间：2023年2月18日'
+            text='更新时间：2024年1月24日'
         ).pack(side=tk.TOP, fill=tk.X)
 
         ttk.Label(
@@ -857,8 +857,8 @@ class MainWindow(CustomWindow):
             master=self.update_error,
             orient=tk.HORIZONTAL
         ).pack(fill=tk.X, pady=(10, 15))
-        self.error_msg = '下载/检测更新失败，错误信息：\n{}'
-        self.error_text = ttk.Label(master=self.update_error)
+        ttk.Label(master=self.update_error,text="下载/检测更新失败，错误信息：").pack(side=tk.TOP, fill=tk.X)
+        self.error_text = tk.Text(master=self.update_error,height=10)
         self.error_text.pack(side=tk.TOP, fill=tk.X)
         ttk.Separator(
             master=self.update_error,
