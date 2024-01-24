@@ -922,7 +922,7 @@ class MainWindow(CustomWindow):
 
     def start_update(self):
         self.update_thread = Thread(target=self.check_update)
-        self.update_thread.daemon = True
+        self.update_thread.setDaemon(True)
         self.update_thread.start()
 
     '''-----------------------------------提醒页面-----------------------------------------------'''
@@ -1347,7 +1347,7 @@ def main():
             topmost=1,
             width=screen_info.get("Monitor")[2] * 1 / 2,
             height=screen_info.get("Monitor")[3] * 4 / 5,
-            version="1.7.0",
+            version="1.7.1",
             exe_dir_path=exe_dir_path,
             work_dir=work_dir,
             logger=logger,
