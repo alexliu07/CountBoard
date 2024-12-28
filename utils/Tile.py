@@ -660,11 +660,15 @@ class NewTaskWindow(CustomWindow):
         self.check_workday.set(1)
         self.sel_workday = ttk.Checkbutton(choose_frame, text="工作日", variable=self.check_workday)
         self.sel_workday.pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
+        self.sel_workday.var = self.check_workday
+
         #周末/节假日
         self.check_holiday = IntVar()
         self.check_holiday.set(1)
         self.sel_holiday = ttk.Checkbutton(choose_frame, text="周末/节假日",variable=self.check_holiday)
         self.sel_holiday.pack(side=tk.LEFT, fill=tk.X,expand=tk.YES, padx=3)
+        self.sel_holiday.var = self.check_holiday
+
 
         # 倒计时颜色选择
         color_frame = ttk.Frame(self.main_frame)
@@ -674,11 +678,13 @@ class NewTaskWindow(CustomWindow):
         ttk.Label(master=color_frame, text='文本颜色： ').pack(side=tk.LEFT, fill=tk.X)
         self.text_color = "#ffffff"
         self.sel_text_color = tk.Canvas(color_frame,width=50,height=25)
+        self.sel_text_color.configure(bg=self.text_color)
         self.sel_text_color.bind("<Button-1>",self.ChooseTextColor)
         self.sel_text_color.pack(side=tk.LEFT)
         # 背景颜色
         self.bg_color = "#080808"
         self.sel_bg_color = tk.Canvas(color_frame,width=50,height=25)
+        self.sel_bg_color.configure(bg=self.bg_color)
         self.sel_bg_color.bind("<Button-1>",self.ChooseBGColor)
         self.sel_bg_color.pack(side=tk.RIGHT)
         ttk.Label(master=color_frame, text='背景颜色： ').pack(side=tk.RIGHT, fill=tk.X)
@@ -730,12 +736,12 @@ class NewTaskWindow(CustomWindow):
                 ).pack(side=tk.LEFT, padx=3)
 
     def ChooseTextColor(self,event):
-        r = colorchooser.askcolor(title='选择文本颜色',color=self.text_color)
+        r = colorchooser.askcolor(parent=self.root,title='选择文本颜色',color=self.text_color)
         if r[1]:
             self.text_color = r[1]
             self.sel_text_color.configure(bg=self.text_color)
     def ChooseBGColor(self,event):
-        r = colorchooser.askcolor(title='选择背景颜色',color=self.bg_color)
+        r = colorchooser.askcolor(parent=self.root,title='选择背景颜色',color=self.bg_color)
         if r[1]:
             self.bg_color = r[1]
             self.sel_bg_color.configure(bg=self.bg_color)
@@ -748,8 +754,6 @@ class NewTaskWindow(CustomWindow):
             if min_year <= new_date.year <= max_year:
                 self.sel_workday.config(state=tk.NORMAL)
                 self.sel_holiday.config(state=tk.NORMAL)
-                self.check_workday.set(1)
-                self.check_holiday.set(1)
             else:
                 self.sel_workday.config(state=tk.DISABLED)
                 self.sel_holiday.config(state=tk.DISABLED)
@@ -775,13 +779,17 @@ class NewTaskWindow(CustomWindow):
             self.tile_queue.put(("del_one", self.value[0]))
 
         # 点击确认按钮,更新数据库
+        if self.check_workday.get() == 0 and self.check_holiday.get() == 0:
+            check_num = [1,1]
+        else:
+            check_num = [self.check_workday.get(),self.check_holiday.get()]
         value = [self.task_name_entry.get(),
                  self.date_entry.entry.get(),
                  self.bg_color,
                  ''.join(random.sample('zyxwvutsrqponmlkjihgfedcba1234567890', 5)),
                  self.text_color,
-                 self.check_workday.get(),
-                 self.check_holiday.get()]
+                 check_num[0],
+                 check_num[1]]
         self.tile_queue.put(("add_one", value))
         self.tile_queue.put(("refresh_tasks"))
 
