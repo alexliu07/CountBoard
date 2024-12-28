@@ -129,7 +129,7 @@ def update():
     toastScriptPath.insert(indexB,"'")
     toastScriptPath = ''.join(toastScriptPath)
     updateScript = '{}\\Update.vbs'.format(mainWindow.work_dir)
-    updateContent = 'Set ws = createobject("wscript.shell")\n{0}\nws.run "powershell.exe Set-ExecutionPolicy RemoteSigned",0,True\nws.run "powershell.exe {1}",0,True\nws.run "taskkill /t /f /im CountBoard.exe",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{2}")\nfile.CopyFile "{3}","{2}",True\nws.run "{2}",0\nfile.DeleteFile("{3}")\nfile.DeleteFile("{4}")\nfile.DeleteFile("{6}")\nfile.DeleteFile("{5}")'.format(mainWindow.elevate_script,toastScriptPath,mainWindow.exe_dir_path + '\\CountBoard.exe',mainWindow.work_dir + '\\Update.exe',mainWindow.work_dir + '\\.UpdateDownloaded',updateScript,toastScript)
+    updateContent = 'Set ws = createobject("wscript.shell")\n{0}\nws.run "powershell.exe Set-ExecutionPolicy RemoteSigned",0,True\nws.run "powershell.exe {1}",0,True\nws.run "taskkill /t /f /im CountBoard.exe",0,True\nSet file = CreateObject("Scripting.FileSystemObject")\nfile.DeleteFile("{2}")\nfile.CopyFile "{3}","{2}",True\nws.run chr(34) & "{2}" & chr(34),0\nfile.DeleteFile("{3}")\nfile.DeleteFile("{4}")\nfile.DeleteFile("{6}")\nfile.DeleteFile("{5}")'.format(mainWindow.elevate_script,toastScriptPath,mainWindow.exe_dir_path + '\\CountBoard.exe',mainWindow.work_dir + '\\Update.exe',mainWindow.work_dir + '\\.UpdateDownloaded',updateScript,toastScript)
     with open(updateScript,'w+',encoding='utf-8') as f:
         f.write(updateContent)
     messagebox.showinfo('CountBoard 更新','CountBoard 即将进行更新，将会自动退出程序并请求管理员权限')
