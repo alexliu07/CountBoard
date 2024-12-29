@@ -34,13 +34,16 @@ if os.path.exists("countBoard.updDisable"):
     isupdate = open('countBoard.updDisable','r',encoding='utf-8')
     if isupdate.read() == '1':
         enableUpdate = False
+
+
+
 class MainWindow(CustomWindow):
     """主窗体模块"""
 
     def __init__(self, version, exe_dir_path, work_dir, logger, *args, **kwargs):
         self.root = tk.Tk()
-
         self.style = ttk.Style()
+
         super().__init__(*args, **kwargs)
 
         # 布局初始化
@@ -142,7 +145,6 @@ class MainWindow(CustomWindow):
         self.scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
         self.scheduler.add_job(self.refresh_, 'cron', hour=0, minute=0)
         self.scheduler.start()
-
 
     def close_(self):
         """重写关闭按钮"""

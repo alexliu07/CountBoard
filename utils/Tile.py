@@ -6,6 +6,7 @@
 @Date ：2021/11/8 11:00
 @contact: g1695698547@163.com
 """
+import ctypes
 import queue
 import random
 import tkinter as tk
@@ -113,6 +114,7 @@ class Tile(CustomWindow):
         # 窗口特效
         self.hwnd = pywintypes.HANDLE(int(self.root.frame(), 16))
         self.window_effect = WindowEffect()
+        self.scalefactor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
 
         # 保存单个日程的tag
         self.tag_name = tk.StringVar()
@@ -193,7 +195,7 @@ class Tile(CustomWindow):
 
         elif content == "NewTaskWindow":
             # 打开新建日程
-            NewTaskWindow(title="新建日程", height=250, tile_queue=self.tile_queue)
+            NewTaskWindow(title="新建日程", height=250*self.scalefactor/100, width=400*self.scalefactor/100,tile_queue=self.tile_queue)
 
         elif content == "exit":
             self.exit()
@@ -223,7 +225,8 @@ class Tile(CustomWindow):
                 if value[3] == self.tag_name.get():
                     NewTaskWindow(
                         title="修改日程",
-                        height=250,
+                        height=250*self.scalefactor/100,
+                        width=400*self.scalefactor/100,
                         tile_queue=self.tile_queue,
                         value=value)
                     return 1
