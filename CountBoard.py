@@ -119,6 +119,7 @@ class MainWindow(CustomWindow):
         if os.path.exists(self.exe_dir_path + '\\logs'):
             shutil.rmtree('{}\\logs'.format(self.exe_dir_path))
 
+        # self.scalefactor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
         # 取消主窗体置顶
         self.root.wm_attributes('-topmost', 0)
         # 界面布局
@@ -216,7 +217,7 @@ class MainWindow(CustomWindow):
 
         elif content == "NewTaskWindow":
             # 打开新建日程
-            NewTaskWindow(title="新建日程", height=220, tile_queue=self.tile_queue)
+            NewTaskWindow(title="新建日程", height=250,width=400, tile_queue=self.tile_queue)
 
         elif content == "reset":
             # 恢复配置
@@ -1360,5 +1361,6 @@ def main():
         logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
-    utility.enable_high_dpi_awareness()
+    scaleFactor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
+    utility.enable_high_dpi_awareness(scaling=scaleFactor/100)
     main()
